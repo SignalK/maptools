@@ -30,7 +30,7 @@ public class KapProcessor {
 	private KAPParser parser;
 	private int zMin;
 	private int zMax;
-
+	private KapObserver observer;
 
 	
 	/**
@@ -42,20 +42,27 @@ public class KapProcessor {
 	public void extractImage(File kapFile) throws Exception {
 		String fileName = kapFile.getAbsolutePath(); 
 		KAPParser parser = new KAPParser(fileName);
-		logger.debug(parser.getName());
-		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
-		logger.debug(parser.getDatum());
-		logger.debug(parser.getMapFileScale());
-		logger.debug(parser.getMapHeightPixels());
-		logger.debug(parser.getMapWidthPixels());
-		logger.debug(parser.getProjectionName());
-		logger.debug(parser.getProjectionParameter());
-		logger.debug(parser.getSoundingReference());
+		log(parser.getName());
+		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
+		log(parser.getDatum());
+		log(parser.getMapFileScale());
+		log(parser.getMapHeightPixels());
+		log(parser.getMapWidthPixels());
+		log(parser.getProjectionName());
+		log(parser.getProjectionParameter());
+		log(parser.getSoundingReference());
+		
 
 		parser.saveAsPNG(parser.getImage(), new File(fileName.substring(0, fileName.lastIndexOf("."))+".png"));
 
 	}
 
+	private void log(Object msg){
+		if(logger.isDebugEnabled())logger.debug(msg);
+		if(observer!=null){
+			observer.appendMsg(msg.toString()+"\n");
+		}
+	}
 	/**
 	 * For KAP file kapFile produce a tile pyramid in pyramidPath
 	 * <br/>
@@ -77,8 +84,8 @@ public class KapProcessor {
 		tileRes.append("    <TileMap version=\"1.0.0\" tilemapservice=\"http://tms.osgeo.org/1.0.0\">\n");
 
 		parser = new KAPParser(kapFile.getAbsolutePath());
-		logger.debug(parser.getName());
-		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
+		log(parser.getName());
+		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				+ parser.getBounds().width);
 
 		tileRes.append("      <Title>" + parser.getMapName() + "</Title>\n");
@@ -89,20 +96,21 @@ public class KapProcessor {
 		Position nw = parser.getMapUseableSector().getNorthWest();
 		Position se = parser.getMapUseableSector().getSouthEast();
 
-		logger.debug("nw, lat=" + nw.getLatitude() + ", lon=" + nw.getLongitude());
-		logger.debug("center, lat=" + center.getLatitude() + ", lon=" + center.getLongitude());
-		logger.debug("se, lat=" + se.getLatitude() + ", lon=" + se.getLongitude());
-
+		log("nw, lat=" + nw.getLatitude() + ", lon=" + nw.getLongitude());
+		log("center, lat=" + center.getLatitude() + ", lon=" + center.getLongitude());
+		log("se, lat=" + se.getLatitude() + ", lon=" + se.getLongitude());
+		
 		tileRes.append("      <BoundingBox minx=\"" + nw.getLongitude() + "\" miny=\"" + se.getLatitude() + "\" maxx=\"" + se.getLongitude() + "\" maxy=\""
 				+ nw.getLatitude() + "\"/>\n");
 		tileRes.append("      <Origin x=\"" + nw.getLongitude() + "\" y=\"" + nw.getLatitude() + "\" />\n");
 		tileRes.append("      <TileFormat width=\"256\" height=\"256\" mime-type=\"image/png\" extension=\"png\"/>\n");
 		tileRes.append("      <TileSets profile=\"mercator\">\n");
 
-		logger.debug("getMapWidthPixels:" + parser.getMapWidthPixels() + ", getMapHeightPixels:" + parser.getMapHeightPixels());
+		log("getMapWidthPixels:" + parser.getMapWidthPixels() + ", getMapHeightPixels:" + parser.getMapHeightPixels());
+		
 		// double xToPixels=StrictMath.abs(Double.valueOf(parser.getBounds().width)/parser.getMapWidthPixels());
 		coordTranslator = parser.getCoordTranslator();
-		// logger.debug("xToPixels:"+xToPixels);
+		// log("xToPixels:"+xToPixels);
 		zMin = Sector.getMinUsefulZoom(nw, se);
 		zMax = zMin + 4;
 		for (int zoom = zMin; zoom < zMax; zoom++) {
@@ -114,7 +122,8 @@ public class KapProcessor {
 			int yTile = Sector.getTileY(nw.getLatitude(), zoom);
 			int XTile = Sector.getTileX(se.getLongitude(), zoom);
 			int YTile = Sector.getTileY(se.getLatitude(), zoom);
-			logger.debug("Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
+			log("Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
+			
 			for (int i = xTile; i <= XTile; i++) {
 				for (int y = YTile - 1; y <= yTile; y++) {
 					createTiles(pyramidPath, kapName, zoom, i, y);
@@ -124,7 +133,8 @@ public class KapProcessor {
 
 		tileRes.append("   </TileSets>\n");
 		tileRes.append("</TileMap>\n");
-		logger.debug(tileRes);
+		log(tileRes.toString());
+		
 		// write out
 		File tileResFile = new File(pyramidPath,kapName + "/"+TILEMAPRESOURCE_XML);
 		FileUtils.writeStringToFile(tileResFile, tileRes.toString());
@@ -143,14 +153,16 @@ public class KapProcessor {
 	private void createTiles(File pyramidPath, String kapName, int zoom, int i, int y) {
 
 		String url = "" + zoom + "/" + i + "/" + y;
-		logger.debug("url=" + url);
+		log("url=" + url);
+		
 		// get lat/lon box
 
 		double south = Sector.tile2lat(y, zoom);
 		double north = Sector.tile2lat(y + 1, zoom);
 		double west = Sector.tile2lon(i, zoom);
 		double east = Sector.tile2lon(i + 1, zoom);
-		logger.debug("north:" + north + ", south:" + south + ", east:" + east + ", west:" + west);
+		log("north:" + north + ", south:" + south + ", east:" + east + ", west:" + west);
+		
 		// convert to pixels
 
 		Point nWest = coordTranslator.getAbsolutePointFromPosition(west, north);
@@ -159,7 +171,8 @@ public class KapProcessor {
 		int pixely = sEast.y;
 		int pixelx = nWest.x;
 		int pixelX = sEast.x;
-		logger.debug(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
+		log(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
+		
 		// skip if out of frame
 		if (pixelY < 0 && pixely < 0)
 			return;
@@ -174,7 +187,7 @@ public class KapProcessor {
 		int width = (int) StrictMath.abs((pixelx > 0 ? (pixelX - pixelx) : pixelX));
 		if (width > parser.getMapWidthPixels())
 			width = parser.getMapWidthPixels();
-		logger.debug("Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
+		log("Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
 
 		File png = new File(pyramidPath, kapName + "/" + url + ".png");
 		png.getParentFile().mkdirs();
@@ -183,6 +196,7 @@ public class KapProcessor {
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
+			
 		}
 	}
 	
@@ -210,16 +224,19 @@ public class KapProcessor {
 			// double heightScale = maxHeight/(double)height;
 			// scale to 256x256 size
 			mapImage = Scalr.resize(mapImage, (int) Math.round(256 / widthRatio), (int) Math.round(256 / heightRatio), Scalr.OP_ANTIALIAS);
-			logger.debug("  tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+			log("  tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+			
 			// image may need padding to be square
 			if (mapImage.getHeight() < 256 || mapImage.getWidth() < 256) {
-				logger.debug("  Padding tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+				log("  Padding tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+				
 				WritableRaster raster = mapImage.getColorModel().createCompatibleWritableRaster(256, 256);
 				// create the associate image
 				BufferedImage fullImage = new BufferedImage(mapImage.getColorModel(), raster, false, null);
 				int offsetY = (pixelY < 0 ? 256 - mapImage.getHeight() : 0);
 				int offsetX = (pixelx < 0 ? 256 - mapImage.getWidth() : 0);
-				logger.debug("  Padding offset x:" + offsetX + ", y:" + offsetY);
+				log("  Padding offset x:" + offsetX + ", y:" + offsetY);
+				
 				addImage(fullImage, mapImage, 1, offsetX, offsetY);
 				parser.saveAsPNG(fullImage, png);
 				fullImage.flush();
@@ -285,6 +302,14 @@ public class KapProcessor {
 		g2d.drawImage(mapImage, x, y, mapImage.getWidth(), mapImage.getHeight(), null);
 		g2d.dispose();
 
+	}
+
+	public KapObserver getObserver() {
+		return observer;
+	}
+
+	public void setObserver(KapObserver observer) {
+		this.observer = observer;
 	}
 
 }

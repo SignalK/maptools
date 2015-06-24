@@ -178,6 +178,11 @@ public class KapProcessor {
 			return;
 		if (pixelY > parser.getMapHeightPixels() && pixely > parser.getMapHeightPixels())
 			return;
+		if (pixelX < 0 && pixelx < 0)
+			return;
+		if (pixelX > parser.getMapWidthPixels() && pixelx > parser.getMapWidthPixels())
+			return;
+		
 		int maxHeight = StrictMath.abs(pixely - pixelY);
 		int maxWidth = StrictMath.abs(pixelX - pixelx);
 

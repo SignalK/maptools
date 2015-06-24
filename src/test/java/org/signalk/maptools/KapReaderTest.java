@@ -28,9 +28,10 @@ public class KapReaderTest {
 		String kapName = "NZ61401";
 		File mapPath = new File("./src/test/resources/");
 		File kapFile = new File(mapPath, kapName+".KAP");
-		processor.extractImage(kapFile);
+		
 		File png = new File(mapPath, kapName+".png");
 		if(png.exists())png.delete();
+		processor.extractImage(kapFile);
 		assertTrue(png.exists());
 		assertTrue(png.length()>1400000);
 	}

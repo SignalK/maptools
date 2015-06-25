@@ -13,3 +13,7 @@
  * http://www.nauticalcharts.noaa.gov/mcd/Raster/
  * http://www.linz.govt.nz/sea/charts
  * https://sites.google.com/site/nauticalfree/
+ 
+##Credits
+
+ The KAP functionality is based on the KAP parser from the Capcode project (capcode.sourceforge.net).

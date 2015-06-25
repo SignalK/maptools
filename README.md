@@ -1,5 +1,7 @@
 ##Map Tools
 
+###Sample: http://htmlpreview.github.io/?https://github.com/SignalK/maptools/blob/master/src/test/resources/NZ61401/openlayers.html
+
  A collection of tools to aid in converting charts and maps for use in Signal K related projects
  
  In particular it has a BSB/KAP file processor that creates Openlayers compatible tile pyramids from NOAA USA nautical charts. 

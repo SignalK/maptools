@@ -16,4 +16,4 @@
  
 ##Credits
 
- The KAP functionality is based on the KAP parser from the Capcode project (capcode.sourceforge.net).
+ The KAP functionality is based on the KAP parser from the Capcode project ( http://capcode.sourceforge.net ).

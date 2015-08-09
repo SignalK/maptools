@@ -198,6 +198,7 @@ public class KapProcessor {
 		png.getParentFile().mkdirs();
 		try {
 			BufferedImage mapImage = parser.getImage((int) pixelx, (int) pixelY, width, height);
+			log("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
@@ -228,7 +229,7 @@ public class KapProcessor {
 			// double widthScale = maxWidth/(double)width;
 			// double heightScale = maxHeight/(double)height;
 			// scale to 256x256 size
-			mapImage = Scalr.resize(mapImage, (int) Math.round(256 / widthRatio), (int) Math.round(256 / heightRatio), Scalr.OP_ANTIALIAS);
+			mapImage = Scalr.resize(mapImage, Scalr.Mode.FIT_TO_WIDTH, (int) Math.round(256 / widthRatio), (int) Math.round(256 / heightRatio), Scalr.OP_ANTIALIAS );
 			log("  tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
 			
 			// image may need padding to be square

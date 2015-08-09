@@ -308,7 +308,7 @@ public class KAPParser {
 	}
 
 	private int offsetSection = 0;
-	
+
 	private Rectangle bounds;
 	private Rectangle visibleBounds;
 	private Sector mapUseableSector;
@@ -316,11 +316,11 @@ public class KAPParser {
 	 * boolean headerLoaded: true if the KAP file header has been loaded.
 	 */
 	private boolean mapReady = false;
-	private int marginLeft=Integer.MAX_VALUE;
-	private int marginRight=0;
-	private int marginTop=Integer.MAX_VALUE;	
-	private int marginBottom=0;
-	
+	private int marginLeft = Integer.MAX_VALUE;
+	private int marginRight = 0;
+	private int marginTop = Integer.MAX_VALUE;
+	private int marginBottom = 0;
+
 	private boolean wpxDone = false;
 	private boolean wpyDone = false;
 	private boolean pwxDone = false;
@@ -488,16 +488,15 @@ public class KAPParser {
 		ByteBuffer buffer = fillBuffer();
 		if (mapReady && aWidth > 0 && aHeight > 0) {
 			// first control the width and height
-			//int left = aLeft < bounds.x ? bounds.x : aLeft;
-			//int top = aTop < bounds.y ? bounds.y : aTop;
-			//int width = (int) (left + aWidth > bounds.getMaxX() ? bounds.getMaxX() - left : aWidth);
-			//int height = (int) (top + aHeight > bounds.getMaxY() ? bounds.getMaxY() - top : aHeight);
+			// int left = aLeft < bounds.x ? bounds.x : aLeft;
+			// int top = aTop < bounds.y ? bounds.y : aTop;
+			// int width = (int) (left + aWidth > bounds.getMaxX() ? bounds.getMaxX() - left : aWidth);
+			// int height = (int) (top + aHeight > bounds.getMaxY() ? bounds.getMaxY() - top : aHeight);
 			int left = aLeft < 0 ? 0 : aLeft;
 			int top = aTop < 0 ? 0 : aTop;
 			int width = (int) (left + aWidth > mapWidthPixels ? mapWidthPixels - left : aWidth);
 			int height = (int) (top + aHeight > mapHeightPixels ? mapHeightPixels - top : aHeight);
-
-
+			logger.debug("Image adjusted: aTop:" + top + ", aLeft:" + left + ", width:" + width + ", height:" + height);
 			// then control the left / top
 			// define the final visible bounds
 			visibleBounds = new Rectangle(left, top, width, height);
@@ -522,14 +521,13 @@ public class KAPParser {
 			 * break;
 			 * }
 			 */
-			ColorModel colorModel = new IndexColorModel(ifm, p.nbColors, p.reds, p.greens, p.blues,Transparency.OPAQUE );
+			ColorModel colorModel = new IndexColorModel(ifm, p.nbColors, p.reds, p.greens, p.blues, Transparency.OPAQUE);
 			// create a raster to set directly the index of colors in
 			try {
 				WritableRaster raster = colorModel.createCompatibleWritableRaster(width, height);
 				// create the associate image
 				image = new BufferedImage(colorModel, raster, false, null);
-				
-				
+
 				// loop on lines
 				for (int yImage = 0; yImage < height; yImage++) {
 					int line = yImage + top;
@@ -563,8 +561,6 @@ public class KAPParser {
 		}
 		return image;
 	}
-	
-	
 
 	private void readRasterLine(ByteBuffer buffer, WritableRaster raster, byte maskingMultiplier, int yImage, int left, int width) {
 		byte b = 0;
@@ -575,7 +571,7 @@ public class KAPParser {
 		// xBuffer is the column in the raster buffer
 		int xBuffer = 0;
 		boolean eol = false;
-		
+
 		// decode pixel and multiplier until end of line
 		while (!eol && buffer.remaining() > 0) {
 			// read next byte
@@ -626,7 +622,6 @@ public class KAPParser {
 		}
 	}
 
-	
 	/**
 	 * load and decompress the full image.<br>
 	 * Each line begins with a line number. Each line must end with the correct
@@ -683,8 +678,8 @@ public class KAPParser {
 			// create the colorModel
 			// the different red green and blue color arrays must have been net
 			ColorPalette p = defaultPalette;
-			
-			ColorModel colorModel = new IndexColorModel(ifm, p.nbColors, p.reds, p.greens, p.blues,Transparency.OPAQUE );
+
+			ColorModel colorModel = new IndexColorModel(ifm, p.nbColors, p.reds, p.greens, p.blues, Transparency.OPAQUE);
 			// create a raster to set directly the index of colors in
 			try {
 				WritableRaster raster = colorModel.createCompatibleWritableRaster(width, height);
@@ -833,8 +828,6 @@ public class KAPParser {
 		return res;
 	}
 
-	
-
 	/**
 	 * 
 	 * Header of a KAP file.<br>
@@ -882,313 +875,325 @@ public class KAPParser {
 	public synchronized void loadHeader() throws IOException {
 		FileReader fr = new FileReader(fileName);
 		BufferedReader reader = new BufferedReader(fr);
-		int bcl = 0;
-		double[] wpx, wpy, pwx, pwy;
-		
-		wpx = new double[12];
-		wpy = new double[12];
-		pwx = new double[12];
-		pwy = new double[12];
-		boolean endOfSection = false;
-		Mode mode = Mode.DEFAULT;
-		int totalCharRead = 0;
-		// read the header
-		while (!endOfSection) {
-			String line = reader.readLine();
-			if (line == null) {
-				// Activator.getDefault();
-				logger.debug(fileName + "Error Message EOF");
-				break;
-			}
-			endOfSection = line.length() > 1 && line.charAt(0) == 0x1A && line.charAt(1) == 0x00;
-			if (!endOfSection) {
-				totalCharRead += (line.length() + 2);
-				// remove space at start and end of string
-				line = line.trim();
-				if (line.startsWith("!")) { //$NON-NLS-1$
-					comments.add(line);
-				} else if (line.toUpperCase().startsWith("VER/")) { //$NON-NLS-1$
-					try {
-						version = Double.parseDouble(new Scanner(line).useDelimiter("VER/").next());//$NON-NLS-1$
-					} catch (Exception e) {
-						version = -1;
-					}
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("BSB/")) { //$NON-NLS-1$
-					mode = Mode.BSB;
-					line = line.replace("BSB/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-				}
-				// compatibility with old formats
-				else if (line.toUpperCase().startsWith("NOS/")) { //$NON-NLS-1$
-					mode = Mode.BSB;
-					line = line.replace("NOS/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-				} else if (line.toUpperCase().startsWith("KNP/")) { //$NON-NLS-1$
-					mode = Mode.KNP;
-					line = line.replace("KNP/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-				} else if (line.toUpperCase().startsWith("CED/")) { //$NON-NLS-1$
-					mode = Mode.CED;
-					line = line.replace("CED/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-				} else if (line.toUpperCase().startsWith("NTM/")) { //$NON-NLS-1$
-					mode = Mode.NTM;
-					line = line.replace("NTM/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-				} else if (line.toUpperCase().startsWith("KNQ/")) { //$NON-NLS-1$
-					mode = Mode.DEFAULT;
-					line = line.replace("KNQ/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					// TODO not treated yet
-				} else if (line.toUpperCase().startsWith("OST/")) { //$NON-NLS-1$
-					mode = Mode.DEFAULT;
-					line = line.replace("OST/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					ost = Integer.parseInt(line);
-				} else if (line.toUpperCase().startsWith("IFM/")) { //$NON-NLS-1$
-					ifm = new Scanner(line).useDelimiter("IFM/").nextInt(); //$NON-NLS-1$
-					defineColorPalettes(ifm);
+		try {
+			int bcl = 0;
+			double[] wpx, wpy, pwx, pwy;
 
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("RGB/")) { //$NON-NLS-1$
-					line = line.replace("RGB/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), defaultPalette);
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("DAY/")) { //$NON-NLS-1$
-					line = line.replace("DAY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), dayPalette);
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("NGT/")) { //$NON-NLS-1$
-					line = line.replace("NGT/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), nightPalette);
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("REF/")) { //$NON-NLS-1$
-					line = line.replace("REF/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					
-					//REF/2,598,592,71.5006416667,-173.0833333333
-					
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					sc.useLocale(Locale.US);
-					sc.nextInt();// num ignored
-					int x = sc.nextInt();
-					int y = sc.nextInt();
-					if(x<marginLeft)marginLeft=x;
-					if(x>marginRight)marginRight=x;
-					if(y<marginTop)marginTop=y;
-					if(y>marginBottom)marginBottom=y;
-					Point p = new Point(x,y);
-					Position pos = new Position(sc.nextDouble(),sc.nextDouble());
-					references.add(new MapReference(pos, p));
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("PLY/")) { //$NON-NLS-1$
-					line = line.replace("PLY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					sc.useLocale(Locale.US);
-					sc.nextInt();// num ignored
-					Position pos = new Position(sc.nextDouble(), sc.nextDouble());
-					displayLimits.add(pos);
-					mode = Mode.DEFAULT;
-				} else if (line.toUpperCase().startsWith("CPH/")) { //$NON-NLS-1$
-					mode = Mode.DEFAULT;
-					line = line.replace("CPH/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					correctiveLongitudePhase = Double.parseDouble(line);
-				} else if (line.toUpperCase().startsWith("DTM/")) { //$NON-NLS-1$
-					mode = Mode.DEFAULT;
-					line = line.replace("DTM/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					line = line.replaceAll(" ", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-					sc.useLocale(Locale.US);
-					latitudeShift = sc.nextDouble() / 60;
-					longitudeShift = sc.nextDouble() / 60;
-				} else if (line.toUpperCase().startsWith("WPX/")) { //$NON-NLS-1$
-					line = line.replace("WPX/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					bcl = 0;
-					mode = Mode.WPX;
-				} else if (line.toUpperCase().startsWith("WPY/")) { //$NON-NLS-1$
-					line = line.replace("WPY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					bcl = 0;
-					mode = Mode.WPY;
-				} else if (line.toUpperCase().startsWith("PWX/")) { //$NON-NLS-1$
-					line = line.replace("PWX/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					bcl = 0;
-					mode = Mode.PWX;
-				} else if (line.toUpperCase().startsWith("PWY/")) { //$NON-NLS-1$
-					line = line.replace("PWY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
-					bcl = 0;
-					mode = Mode.PWY;
-				} else if (line.toUpperCase().startsWith("ERR/")) { //$NON-NLS-1$
-					// not treated yet
-					mode = Mode.DEFAULT;
-				}
-
-				Scanner sc = new Scanner(line).useDelimiter(","); //$NON-NLS-1$
-				sc.useLocale(Locale.US);
-				switch (mode) {
-				case DEFAULT:
-					break;
-				case BSB:
-					while (sc.hasNext()) {
-						String field = sc.next();
-						if (field.contains("NA=")) { //$NON-NLS-1$
-							mapName = field.replace("NA=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("NU=")) { //$NON-NLS-1$
-							mapNum = field.replace("NU=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("RA=")) { //$NON-NLS-1$
-							mapWidthPixels = Integer.parseInt(field.replace("RA=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-							mapHeightPixels = sc.nextInt();
-						} else if (field.contains("DU=")) { //$NON-NLS-1$
-							resolutionDPI = Integer.parseInt(field.replace("DU=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-						}
-					}
-					break;
-				case KNP:
-					while (sc.hasNext()) {
-						String field = sc.next();
-						if (field.contains("SC=")) { //$NON-NLS-1$
-							mapFileScale = Integer.parseInt(field.replace("SC=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("GD=")) { //$NON-NLS-1$
-							datum = field.replace("GD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("PR=")) { //$NON-NLS-1$
-							projection = field.replace("PR=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("PP=")) { //$NON-NLS-1$
-							projectionParameter = field.replace("PP=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("PI=")) { //$NON-NLS-1$
-							PI = field.replace("PI=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("SP=")) { //$NON-NLS-1$
-							SP = field.replace("SP=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("SK=")) { //$NON-NLS-1$
-							SK = Float.parseFloat(field.replace("SK=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("UN=")) { //$NON-NLS-1$
-							UN = field.replace("UN=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("SD=")) { //$NON-NLS-1$
-							SD = field.replace("SD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("DX=")) { //$NON-NLS-1$
-							DX = Float.parseFloat(field.replace("DX=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("DY=")) { //$NON-NLS-1$
-							DY = Float.parseFloat(field.replace("DY=", "")); //$NON-NLS-1$ //$NON-NLS-2$
-						}
-					}
-					break;
-				case CED:
-					while (sc.hasNext()) {
-						String field = sc.next();
-						if (field.contains("SE=")) { //$NON-NLS-1$
-							SE = field.replace("SE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("RE=")) { //$NON-NLS-1$
-							RE = field.replace("RE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("ED=")) { //$NON-NLS-1$
-							ED = field.replace("ED=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						}
-					}
-					break;
-				case NTM:
-					while (sc.hasNext()) {
-						String field = sc.next();
-						if (field.contains("NE=")) { //$NON-NLS-1$
-							NE = field.replace("NE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("ND=")) { //$NON-NLS-1$
-							ND = field.replace("ND=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						} else if (field.contains("BD=")) { //$NON-NLS-1$
-							BD = field.replace("BD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
-						}
-					}
-					break;
-				case WPX:
-					wpxDone = true;
-					if (bcl == 0) {
-						sc.next(); // ignore order
-					}
-					while (sc.hasNext()) {
-						wpx[bcl++] = sc.nextDouble();
-					}
-					break;
-				case WPY:
-					wpyDone = true;
-					if (bcl == 0) {
-						sc.next(); // ignore order
-					}
-					while (sc.hasNext()) {
-						wpy[bcl++] = sc.nextDouble();
-					}
-					break;
-				case PWX:
-					pwxDone = true;
-					if (bcl == 0) {
-						sc.next(); // ignore order
-					}
-					while (sc.hasNext()) {
-						pwx[bcl++] = sc.nextDouble();
-					}
-					break;
-				case PWY:
-					pwyDone = true;
-					if (bcl == 0) {
-						sc.next(); // ignore order
-					}
-					while (sc.hasNext()) {
-						pwy[bcl++] = sc.nextDouble();
-					}
-					break;
-
-				}
-			}
-			// END OF SECTION FOUND
-			else {
-				// we should now read a binary version of the ifm
-				byte binaryCodedIFM = (byte) line.charAt(2);
-				// check that it is equal to the textual one, if not force to
-				// the binary
-				if (binaryCodedIFM != ifm) {
+			wpx = new double[12];
+			wpy = new double[12];
+			pwx = new double[12];
+			pwy = new double[12];
+			boolean endOfSection = false;
+			Mode mode = Mode.DEFAULT;
+			int totalCharRead = 0;
+			// read the header
+			while (!endOfSection) {
+				String line = reader.readLine();
+				if (line == null) {
 					// Activator.getDefault();
-					logger.error(String.format("error bad IFM %d<>%d", ifm, binaryCodedIFM)); //$NON-NLS-1$
-					ifm = binaryCodedIFM;
+					logger.debug(fileName + "Error Message EOF");
+					break;
 				}
-				// store the position of the raster data for future use (reading
-				// the image)
-				// ship 0x1A, 0x00 and the IFM (3 bytes)
-				rasterDataOffset = totalCharRead + 3;
-				// read the first line to get the first line number as an offset
-				// (badly coded charts)
-				try {
-					offsetY = (byte) line.charAt(3);
-				} catch (Exception e) {
-					offsetY = 0;
-					logger.error("error reading header of " + fileName, e);
+				endOfSection = line.length() > 1 && line.charAt(0) == 0x1A && line.charAt(1) == 0x00;
+				if (!endOfSection) {
+					totalCharRead += (line.length() + 2);
+					// remove space at start and end of string
+					line = line.trim();
+					if (line.startsWith("!")) { //$NON-NLS-1$
+						comments.add(line);
+					} else if (line.toUpperCase().startsWith("VER/")) { //$NON-NLS-1$
+						try {
+							version = Double.parseDouble(new Scanner(line).useDelimiter("VER/").next());//$NON-NLS-1$
+						} catch (Exception e) {
+							version = -1;
+						}
+						mode = Mode.DEFAULT;
+					} else if (line.toUpperCase().startsWith("BSB/")) { //$NON-NLS-1$
+						mode = Mode.BSB;
+						line = line.replace("BSB/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					}
+					// compatibility with old formats
+					else if (line.toUpperCase().startsWith("NOS/")) { //$NON-NLS-1$
+						mode = Mode.BSB;
+						line = line.replace("NOS/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					} else if (line.toUpperCase().startsWith("KNP/")) { //$NON-NLS-1$
+						mode = Mode.KNP;
+						line = line.replace("KNP/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					} else if (line.toUpperCase().startsWith("CED/")) { //$NON-NLS-1$
+						mode = Mode.CED;
+						line = line.replace("CED/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					} else if (line.toUpperCase().startsWith("NTM/")) { //$NON-NLS-1$
+						mode = Mode.NTM;
+						line = line.replace("NTM/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+					} else if (line.toUpperCase().startsWith("KNQ/")) { //$NON-NLS-1$
+						mode = Mode.DEFAULT;
+						line = line.replace("KNQ/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						// TODO not treated yet
+					} else if (line.toUpperCase().startsWith("OST/")) { //$NON-NLS-1$
+						mode = Mode.DEFAULT;
+						line = line.replace("OST/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						ost = Integer.parseInt(line);
+					} else if (line.toUpperCase().startsWith("IFM/")) { //$NON-NLS-1$
+						ifm = new Scanner(line).useDelimiter("IFM/").nextInt(); //$NON-NLS-1$
+						defineColorPalettes(ifm);
+
+						mode = Mode.DEFAULT;
+					} else if (line.toUpperCase().startsWith("RGB/")) { //$NON-NLS-1$
+						line = line.replace("RGB/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) {
+							fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), defaultPalette);
+							mode = Mode.DEFAULT;
+						}
+					} else if (line.toUpperCase().startsWith("DAY/")) { //$NON-NLS-1$
+						line = line.replace("DAY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) {
+							fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), dayPalette);
+							mode = Mode.DEFAULT;
+						}
+					} else if (line.toUpperCase().startsWith("NGT/")) { //$NON-NLS-1$
+						line = line.replace("NGT/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) { //$NON-NLS-1$
+							fillPalette(sc.nextInt(), sc.nextInt(), sc.nextInt(), sc.nextInt(), nightPalette);
+							mode = Mode.DEFAULT;
+						}
+					} else if (line.toUpperCase().startsWith("REF/")) { //$NON-NLS-1$
+						line = line.replace("REF/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+
+						// REF/2,598,592,71.5006416667,-173.0833333333
+
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) { //$NON-NLS-1$
+							sc.useLocale(Locale.US);
+							sc.nextInt();// num ignored
+							int x = sc.nextInt();
+							int y = sc.nextInt();
+							if (x < marginLeft)
+								marginLeft = x;
+							if (x > marginRight)
+								marginRight = x;
+							if (y < marginTop)
+								marginTop = y;
+							if (y > marginBottom)
+								marginBottom = y;
+							Point p = new Point(x, y);
+							Position pos = new Position(sc.nextDouble(), sc.nextDouble());
+							references.add(new MapReference(pos, p));
+							mode = Mode.DEFAULT;
+						}
+					} else if (line.toUpperCase().startsWith("PLY/")) { //$NON-NLS-1$
+						line = line.replace("PLY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) { //$NON-NLS-1$
+							sc.useLocale(Locale.US);
+							sc.nextInt();// num ignored
+							Position pos = new Position(sc.nextDouble(), sc.nextDouble());
+							displayLimits.add(pos);
+							mode = Mode.DEFAULT;
+						}
+					} else if (line.toUpperCase().startsWith("CPH/")) { //$NON-NLS-1$
+						mode = Mode.DEFAULT;
+						line = line.replace("CPH/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						correctiveLongitudePhase = Double.parseDouble(line);
+					} else if (line.toUpperCase().startsWith("DTM/")) { //$NON-NLS-1$
+						mode = Mode.DEFAULT;
+						line = line.replace("DTM/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						line = line.replaceAll(" ", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						try (Scanner sc = new Scanner(line).useDelimiter(",")) { //$NON-NLS-1$
+							sc.useLocale(Locale.US);
+							latitudeShift = sc.nextDouble() / 60;
+							longitudeShift = sc.nextDouble() / 60;
+						}
+					} else if (line.toUpperCase().startsWith("WPX/")) { //$NON-NLS-1$
+						line = line.replace("WPX/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						bcl = 0;
+						mode = Mode.WPX;
+					} else if (line.toUpperCase().startsWith("WPY/")) { //$NON-NLS-1$
+						line = line.replace("WPY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						bcl = 0;
+						mode = Mode.WPY;
+					} else if (line.toUpperCase().startsWith("PWX/")) { //$NON-NLS-1$
+						line = line.replace("PWX/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						bcl = 0;
+						mode = Mode.PWX;
+					} else if (line.toUpperCase().startsWith("PWY/")) { //$NON-NLS-1$
+						line = line.replace("PWY/", ""); //$NON-NLS-1$ //$NON-NLS-2$
+						bcl = 0;
+						mode = Mode.PWY;
+					} else if (line.toUpperCase().startsWith("ERR/")) { //$NON-NLS-1$
+						// not treated yet
+						mode = Mode.DEFAULT;
+					}
+
+					try (Scanner sc = new Scanner(line).useDelimiter(",")) { //$NON-NLS-1$
+
+						sc.useLocale(Locale.US);
+						switch (mode) {
+						case DEFAULT:
+							break;
+						case BSB:
+							while (sc.hasNext()) {
+								String field = sc.next();
+								if (field.contains("NA=")) { //$NON-NLS-1$
+									mapName = field.replace("NA=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("NU=")) { //$NON-NLS-1$
+									mapNum = field.replace("NU=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("RA=")) { //$NON-NLS-1$
+									mapWidthPixels = Integer.parseInt(field.replace("RA=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+									mapHeightPixels = sc.nextInt();
+								} else if (field.contains("DU=")) { //$NON-NLS-1$
+									resolutionDPI = Integer.parseInt(field.replace("DU=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+								}
+							}
+							break;
+						case KNP:
+							while (sc.hasNext()) {
+								String field = sc.next();
+								if (field.contains("SC=")) { //$NON-NLS-1$
+									mapFileScale = Integer.parseInt(field.replace("SC=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("GD=")) { //$NON-NLS-1$
+									datum = field.replace("GD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("PR=")) { //$NON-NLS-1$
+									projection = field.replace("PR=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("PP=")) { //$NON-NLS-1$
+									projectionParameter = field.replace("PP=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("PI=")) { //$NON-NLS-1$
+									PI = field.replace("PI=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("SP=")) { //$NON-NLS-1$
+									SP = field.replace("SP=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("SK=")) { //$NON-NLS-1$
+									SK = Float.parseFloat(field.replace("SK=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("UN=")) { //$NON-NLS-1$
+									UN = field.replace("UN=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("SD=")) { //$NON-NLS-1$
+									SD = field.replace("SD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("DX=")) { //$NON-NLS-1$
+									DX = Float.parseFloat(field.replace("DX=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("DY=")) { //$NON-NLS-1$
+									DY = Float.parseFloat(field.replace("DY=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+								}
+							}
+							break;
+						case CED:
+							while (sc.hasNext()) {
+								String field = sc.next();
+								if (field.contains("SE=")) { //$NON-NLS-1$
+									SE = field.replace("SE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("RE=")) { //$NON-NLS-1$
+									RE = field.replace("RE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("ED=")) { //$NON-NLS-1$
+									ED = field.replace("ED=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								}
+							}
+							break;
+						case NTM:
+							while (sc.hasNext()) {
+								String field = sc.next();
+								if (field.contains("NE=")) { //$NON-NLS-1$
+									NE = field.replace("NE=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("ND=")) { //$NON-NLS-1$
+									ND = field.replace("ND=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								} else if (field.contains("BD=")) { //$NON-NLS-1$
+									BD = field.replace("BD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
+								}
+							}
+							break;
+						case WPX:
+							wpxDone = true;
+							if (bcl == 0) {
+								sc.next(); // ignore order
+							}
+							while (sc.hasNext()) {
+								wpx[bcl++] = sc.nextDouble();
+							}
+							break;
+						case WPY:
+							wpyDone = true;
+							if (bcl == 0) {
+								sc.next(); // ignore order
+							}
+							while (sc.hasNext()) {
+								wpy[bcl++] = sc.nextDouble();
+							}
+							break;
+						case PWX:
+							pwxDone = true;
+							if (bcl == 0) {
+								sc.next(); // ignore order
+							}
+							while (sc.hasNext()) {
+								pwx[bcl++] = sc.nextDouble();
+							}
+							break;
+						case PWY:
+							pwyDone = true;
+							if (bcl == 0) {
+								sc.next(); // ignore order
+							}
+							while (sc.hasNext()) {
+								pwy[bcl++] = sc.nextDouble();
+							}
+							break;
+
+						}
+					}
 				}
+				// END OF SECTION FOUND
+				else {
+					// we should now read a binary version of the ifm
+					byte binaryCodedIFM = (byte) line.charAt(2);
+					// check that it is equal to the textual one, if not force to
+					// the binary
+					if (binaryCodedIFM != ifm) {
+						// Activator.getDefault();
+						logger.error(String.format("error bad IFM %d<>%d", ifm, binaryCodedIFM)); //$NON-NLS-1$
+						ifm = binaryCodedIFM;
+					}
+					// store the position of the raster data for future use (reading
+					// the image)
+					// ship 0x1A, 0x00 and the IFM (3 bytes)
+					rasterDataOffset = totalCharRead + 3;
+					// read the first line to get the first line number as an offset
+					// (badly coded charts)
+					try {
+						offsetY = (byte) line.charAt(3);
+					} catch (Exception e) {
+						offsetY = 0;
+						logger.error("error reading header of " + fileName, e);
+					}
+				}
+
 			}
+			// validate the map only when the header has been completely read
+			if (endOfSection) {
+				//
+				// build the coordinate translator
+				polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
 
-		}
-		// validate the map only when the header has been completely read
-		if (endOfSection) {
-			//
-			// build the coordinate translator
-			polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
+				if (polynomLoaded) {
+					coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy);
+				} else {
+					coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references);
+				}
+				// convert from decimal minutes to decimal degrees!
+				coordTranslator.setLatShift(latitudeShift / 60d);
+				coordTranslator.setLonShift(longitudeShift / 60d);
 
-			if (polynomLoaded) {
-				coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy);
-			} 
-			else {
-				coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references);
+				mapUseableSector = extractVisibleSectorFromBounds(displayLimits);
+
+				Point p = coordTranslator.getAbsolutePointFromPosition(mapUseableSector.getNorthWest());
+				int leftBound = p.x;
+				int topBound = p.y;
+				p = coordTranslator.getAbsolutePointFromPosition(mapUseableSector.getSouthEast());
+				int bottomBound = p.y;
+				int rightBound = p.x;
+
+				// max and min are set to correct the issue with map
+				// across the 180 longitude
+				bounds = new Rectangle(Math.min(leftBound, rightBound), topBound, Math.max(rightBound - leftBound, leftBound - rightBound), bottomBound
+						- topBound);
+				mapReady = true;
+
 			}
-			//convert from decimal minutes to decimal degrees!
-			coordTranslator.setLatShift(latitudeShift/60d);
-			coordTranslator.setLonShift(longitudeShift/60d);
-			
-			mapUseableSector = extractVisibleSectorFromBounds(displayLimits);
-
-			Point p = coordTranslator
-                    .getAbsolutePointFromPosition(mapUseableSector.getNorthWest());
-		    int leftBound = p.x;
-		    int topBound = p.y;
-		    p = coordTranslator
-		                    .getAbsolutePointFromPosition(mapUseableSector.getSouthEast());
-		    int bottomBound = p.y;
-		    int rightBound = p.x;
-		
-		    // max and min are set to correct the issue with map
-		    // across the 180 longitude
-		    bounds = new Rectangle(Math.min(leftBound, rightBound), topBound,
-                    Math.max(rightBound - leftBound, leftBound - rightBound),
-                    bottomBound - topBound);
-			mapReady = true;
-
+		} finally {
+			reader.close();
 		}
 	}
 
@@ -1198,7 +1203,7 @@ public class KAPParser {
 	 * @param bounds
 	 * @return a Sector
 	 */
-	public  Sector extractVisibleSectorFromBounds(Vector<Position> bounds) {
+	public Sector extractVisibleSectorFromBounds(Vector<Position> bounds) {
 		// define the min/max initial values
 		double maxLon = -180;
 		double minLon = 180;
@@ -1226,37 +1231,30 @@ public class KAPParser {
 				maxLat = lat;
 			}
 		}
-		logger.debug(" marginTop:"+marginTop+", marginBottom:"+marginBottom+", marginLeft:"+marginLeft+", marginRight:"+marginRight);
-		logger.debug(" maxLat:"+maxLat+ " minLon:"+minLon);
-		Point p = coordTranslator
-                .getAbsolutePointFromPosition(minLon,maxLat);
-		logger.debug(" p:"+p);
-		logger.debug(" position:"+coordTranslator.getAbsolutePositionFromPoint(new Point(0,0)));
-		
-	    p.x=0; //p.x-marginLeft;
-	    p.y=0;//p.y-marginTop-28;
-	    Position topLeft = coordTranslator
-	                    .getAbsolutePositionFromPoint(p);
-	    p = coordTranslator
-                .getAbsolutePointFromPosition(maxLon,minLat);
-	    p.x=getMapWidthPixels();///p.x+(getMapWidthPixels()-marginRight);
-	    p.y=getMapHeightPixels();//p.y+(getMapHeightPixels()-marginBottom);
-	    Position bottomRight = coordTranslator
-	                    .getAbsolutePositionFromPoint(p);
-	    
-	    p = coordTranslator
-                .getAbsolutePointFromPosition(maxNegLon,minLat);
-	    p.x=getMapWidthPixels();//p.x+(getMapWidthPixels()-marginRight);
-	    p.y=getMapHeightPixels();//p.y+(getMapHeightPixels()-marginBottom);
-	    Position negRight = coordTranslator
-	                    .getAbsolutePositionFromPoint(p);
-	    
-	    
+		logger.debug(" marginTop:" + marginTop + ", marginBottom:" + marginBottom + ", marginLeft:" + marginLeft + ", marginRight:" + marginRight);
+		logger.debug(" maxLat:" + maxLat + " minLon:" + minLon);
+		Point p = coordTranslator.getAbsolutePointFromPosition(minLon, maxLat);
+		logger.debug(" p:" + p.getLocation().x+", "+p.getLocation().y);
+		logger.debug(" position:" + coordTranslator.getAbsolutePositionFromPoint(new Point(0, 0)).getLatitude()+", "+coordTranslator.getAbsolutePositionFromPoint(new Point(0, 0)).getLongitude());
+
+		p.x = 0; // p.x-marginLeft;
+		p.y = 0;// p.y-marginTop-28;
+		Position topLeft = coordTranslator.getAbsolutePositionFromPoint(p);
+		p = coordTranslator.getAbsolutePointFromPosition(maxLon, minLat);
+		p.x = getMapWidthPixels();// /p.x+(getMapWidthPixels()-marginRight);
+		p.y = getMapHeightPixels();// p.y+(getMapHeightPixels()-marginBottom);
+		Position bottomRight = coordTranslator.getAbsolutePositionFromPoint(p);
+
+		p = coordTranslator.getAbsolutePointFromPosition(maxNegLon, minLat);
+		p.x = getMapWidthPixels();// p.x+(getMapWidthPixels()-marginRight);
+		p.y = getMapHeightPixels();// p.y+(getMapHeightPixels()-marginBottom);
+		Position negRight = coordTranslator.getAbsolutePositionFromPoint(p);
+
 		if (isCrossingDayNightLine(topLeft, bottomRight)) {
 			topLeft = new Position(maxLat, maxLon);
 			bottomRight = new Position(minLat, negRight.getLongitude());
 		}
-		return new Sector( topLeft, bottomRight );
+		return new Sector(topLeft, bottomRight);
 	}
 
 	private static boolean isCrossingDayNightLine(Position topLeft, Position bottomRight) {
@@ -1296,9 +1294,6 @@ public class KAPParser {
 		dayPalette = new ColorPalette(nbColors);
 		nightPalette = new ColorPalette(nbColors);
 	}
-
-	
-	
 
 	/**
 	 * @return the displayableArea
@@ -1369,8 +1364,6 @@ public class KAPParser {
 		return mapHeightPixels;
 	}
 
-
-
 	/**
 	 * @return the datum
 	 */
@@ -1409,14 +1402,11 @@ public class KAPParser {
 		return imageFormat;
 	}
 
-	
-
 	// @Override
 	public String getName() {
 		return this.mapName;
 	}
 
-	
 	/**
 	 * @return the encrypted
 	 */
@@ -1431,14 +1421,10 @@ public class KAPParser {
 		return correctiveLongitudePhase;
 	}
 
-
-
 	// @Override
 	public Rectangle getVisibleBounds() {
 		return visibleBounds;
 	}
-
-	
 
 	public void saveAsPNG(BufferedImage img, File file) throws IOException {
 		ImageIO.write(img, "png", file); //$NON-NLS-1$
@@ -1455,7 +1441,6 @@ public class KAPParser {
 		return mapFileScale;
 	}
 
-	
 	// @Override
 	public void setName(String s) {
 		mapName = s;
@@ -1486,8 +1471,6 @@ public class KAPParser {
 	public void setScale(int sc) {
 		mapFileScale = sc;
 	}
-
-
 
 	// @Override
 	public Vector<Position> getBoundaries() {
@@ -1561,8 +1544,6 @@ public class KAPParser {
 	public void setSoundings(String soundings) {
 		this.UN = soundings;
 	}
-
-	
 
 	// @Override
 	public Object getProductionDate() {

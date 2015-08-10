@@ -540,15 +540,15 @@ public class KAPParser {
 							// check that the line is the correct one
 							// (lines in the encoded file starts at 1 for pixel
 							// pos 0)
-							if (line == lineNumber || line == lineNumber - 1) {
+							//if (line == lineNumber || line == lineNumber - 1) {
 								readRasterLine(buffer, raster, maskingMultiplier, yImage, left, width);
-							} else {
+							//} else {
 								// Activator.getDefault();
 								// Log.severe(Activator.getBundle(), String.format(
 								// "error in line %d (%d)", lineNumber,
 								// line));
-								logger.error(String.format("error in line %d (%d)", lineNumber, line));
-							}
+							//	logger.error(String.format("error in line %d (%d at address %d)", lineNumber, line, address));
+							//}
 						}
 					}
 				}

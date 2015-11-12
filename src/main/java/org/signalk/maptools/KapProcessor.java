@@ -13,9 +13,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Logger;
 import org.imgscalr.Scalr;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Provides methods to process BSB/KAP files into images and tile pyramids compatible with Leaflet and OpenLayers.

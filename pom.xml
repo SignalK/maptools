@@ -24,6 +24,19 @@
 			<email>robert@42.co.nz</email>
 		</developer>
 	</developers>
+	<build>
+		<plugins>
+	      <plugin>
+	        <groupId>org.apache.maven.plugins</groupId>
+	        <artifactId>maven-compiler-plugin</artifactId>
+	        <version>3.3</version>
+	        <configuration>
+	          <source>1.7</source>
+	          <target>1.7</target>
+	        </configuration>
+	      </plugin>
+	    </plugins>
+	</build>
 	<dependencies>
 		<!-- commons and misc = apache licence -->
 		<dependency>

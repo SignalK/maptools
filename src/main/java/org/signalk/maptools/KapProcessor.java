@@ -3,14 +3,19 @@ package org.signalk.maptools;
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Shape;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Logger;
 import org.imgscalr.Scalr;
 
@@ -39,7 +44,8 @@ public class KapProcessor {
 	public void extractImage(File kapFile) throws Exception {
 		String fileName = kapFile.getAbsolutePath(); 
 		KAPParser parser = new KAPParser(fileName);
-		log(parser.getName());
+		log("RBerliner maptools");
+                log(parser.getName());
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
 		log(parser.getDatum());
 		log(parser.getMapFileScale());
@@ -55,7 +61,12 @@ public class KapProcessor {
 	}
 
 	private void log(Object msg){
-		if(logger.isDebugEnabled())logger.debug(msg);
+                StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+                StackTraceElement e = stacktrace[3];//maybe this number needs to be corrected
+                String methodName = e.getMethodName();
+                if(logger.isDebugEnabled()){
+                    logger.debug(methodName+" "+msg);
+                }
 		if(observer!=null){
 			observer.appendMsg(msg.toString()+"\n");
 		}
@@ -81,7 +92,35 @@ public class KapProcessor {
 		tileRes.append("    <TileMap version=\"1.0.0\" tilemapservice=\"http://tms.osgeo.org/1.0.0\">\n");
 
 		parser = new KAPParser(kapFile.getAbsolutePath());
+                
+                // if the skew is non-zero, we will generate the full decompressed png image and save it to disk
+                if (parser.getSkew()== 0.){
+                    BufferedImage bufImage = parser.getImage();
+                    parser.saveAsPNG(bufImage, new File(pyramidPath.getAbsolutePath()+"/"+kapName+".png"));                    
+                } else {
+                    log("skew = "+parser.getSkew());
+                    BufferedImage bufImage = parser.getImage();
+                    ColorModel cm = bufImage.getColorModel();
+                    AffineTransform tx = new AffineTransform();
+                    tx.rotate(-Math.toRadians(parser.getSkew()));   
+                    AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+                    Rectangle2D rec2d = op.getBounds2D(bufImage);
+                    log("rec2d minX, maxX, minY, MaxY "+rec2d.getMinX()+" "+rec2d.getMaxX()+" "+rec2d.getMinY()+" "+rec2d.getMaxY());
+                    tx.translate(-rec2d.getMinX()*Math.cos(Math.toRadians(parser.getSkew())),-rec2d.getMinX()*Math.sin(Math.toRadians(parser.getSkew())) );
+                    op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+                    rec2d = op.getBounds2D(bufImage);
+                    log("After Rot + trans "+rec2d.toString());
+                    
+                    
+                    
+                    BufferedImage rotTxImage = op.filter(bufImage, null);
+                    parser.saveAsPNG(rotTxImage, new File(pyramidPath.getAbsolutePath()+"/"+kapName+"_Rotated.png"));
+                }
+                
+                
+                log("RBerliner maptools");
 		log(parser.getName());
+                log("Skew = "+parser.getSkew());
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				+ parser.getBounds().width);
 
@@ -195,10 +234,11 @@ public class KapProcessor {
 		png.getParentFile().mkdirs();
 		try {
 			BufferedImage mapImage = parser.getImage((int) pixelx, (int) pixelY, width, height);
-			log("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
+                        log("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
-			logger.error(e.getMessage(), e);
+//			logger.error(e.getMessage(), e);
+			logger.error("\tError", e);
 			
 		}
 	}

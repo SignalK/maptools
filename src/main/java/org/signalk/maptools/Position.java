@@ -25,5 +25,9 @@ public class Position {
 	protected void setLongitude(double longitude) {
 		this.longitude = longitude;
 	}
-
+        
+        public String toString(){
+            return String.format("lat=%f lon=%f", latitude, longitude);
+        }
+ 
 }

@@ -174,6 +174,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
@@ -189,6 +190,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Vector;
@@ -271,7 +273,7 @@ public class KAPParser {
     private BufferedImage image = null;
     // TODO perform a ROT-9 conversion in case of encrypted file
     private final boolean encrypted = false;
-    private AffineTransform tx = null;
+    private AffineTransform tx;
     /**
      * IFM records define the SB compression type of the binary image data.<br>
      * Where supported CompressionType values and their interpretation are:<br>
@@ -1178,27 +1180,58 @@ public class KAPParser {
                 // build the coordinate translator
                 polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
                 mapReady = true;
+                BufferedImage tempImage = getImage();
+                saveAsPNG(tempImage, new File(fileName + ".png"));
                 if (getSkew() == 0.) {
-                    image = getImage();
                     tx = null;
-//                    saveAsPNG(image, new File(pyramidPath.getAbsolutePath()+"/"+kapName+".png"));
                 } else {
                     logger.debug("skew = " + getSkew());
-                    image = getImage();
-                    ColorModel cm = image.getColorModel();
                     tx = new AffineTransform();
-                    tx.rotate(-Math.toRadians(getSkew()));
-                    AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
-                    Rectangle2D rec2d = op.getBounds2D(image);
-                    logger.debug("rec2d minX, maxX, minY, MaxY " + rec2d.getMinX() + " " + rec2d.getMaxX() + " " + rec2d.getMinY() + " " + rec2d.getMaxY());
-                    tx.translate(-rec2d.getMinX() * Math.cos(Math.toRadians(getSkew())), -rec2d.getMinX() * Math.sin(Math.toRadians(getSkew())));
-                    op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
-                    rec2d = op.getBounds2D(image);
-                    logger.debug("After Rot + trans " + rec2d.toString());
 
-                    BufferedImage rotTxImage = op.filter(image, null);
-//                    parser.saveAsPNG(rotTxImage, new File(pyramidPath.getAbsolutePath()+"/"+kapName+"_Rotated.png"));
-                    image = rotTxImage;
+                    // Rotate by skew about upper left corner
+                    tx.rotate(-Math.toRadians(getSkew()));
+                    Point2D[] corners = new Point2D.Double[4];
+                    corners[0] = new Point2D.Double(0., 0.);
+                    corners[1] = new Point2D.Double((double) mapWidthPixels, 0.);
+                    corners[2] = new Point2D.Double((double) mapWidthPixels, (double) mapHeightPixels);
+                    corners[3] = new Point2D.Double(0., mapHeightPixels);
+                    Point2D tempPt[] = new Point2D.Double[4];
+                    tx.transform(corners, 0, tempPt, 0, corners.length);
+                    logger.debug("upLeft: " + corners[0].toString() + " --> " + tempPt[0].toString());
+                    logger.debug("upRight: " + corners[1].toString() + " --> " + tempPt[1].toString());
+                    logger.debug("lowLeft: " + corners[2].toString() + " --> " + tempPt[2].toString());
+                    logger.debug("lowRight: " + corners[3].toString() + " --> " + tempPt[3].toString());
+
+                    // Calculate the minimum x and y corner values
+                    Double minX = Double.MAX_VALUE;
+                    Double minY = Double.MAX_VALUE;
+                    for (int i = 0; i < corners.length; i++) {
+                        if (minX > tempPt[i].getX()) {
+                            minX = tempPt[i].getX();
+                        }
+                        if (minY > tempPt[i].getY()) {
+                            minY = tempPt[i].getY();
+                        }
+                    }
+                    Point2D[] transformedCorner = new Point2D.Double[4];
+
+                    // translate to bring the corners back into the plotable area (x>0 and y>0)
+                    // the case for minX>0 and minY < 0 has not been checked
+                    if (minX < 0) {
+                        tx.translate(-minX * Math.cos(Math.toRadians(getSkew())), -minX * Math.sin(Math.toRadians(getSkew())));
+                    } else {
+                        tx.translate(-minY * Math.sin(Math.toRadians(getSkew())), -minY * Math.cos(Math.toRadians(getSkew())));
+                    }
+                    tx.transform(corners, 0, transformedCorner, 0, corners.length);
+                    logger.debug("upLeft: " + corners[0].toString() + " --> " + transformedCorner[0].toString());
+                    logger.debug("upRight: " + corners[1].toString() + " --> " + transformedCorner[1].toString());
+                    logger.debug("lowLeft: " + corners[2].toString() + " --> " + transformedCorner[2].toString());
+                    logger.debug("lowRight: " + corners[3].toString() + " --> " + transformedCorner[3].toString());
+                    mapWidthPixels = (int) Math.round(transformedCorner[1].getX());
+                    mapHeightPixels = (int) Math.round(transformedCorner[2].getY());
+                    AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+                    image = op.filter(tempImage, null);
+                    saveAsPNG(image, new File(fileName + "_Rotated.png"));
                 }
 
                 if (polynomLoaded) {
@@ -1218,6 +1251,7 @@ public class KAPParser {
                     tempPoint = coordTranslator.getAbsolutePointFromPosition(tempPos);
                     logger.debug(tempPos.toString() + " x, y = " + tempPoint.x + "  " + tempPoint.y);
                 }
+
                 mapUseableSector = extractVisibleSectorFromBounds(displayLimits);
 
                 Point p = coordTranslator.getAbsolutePointFromPosition(mapUseableSector.getNorthWest());
@@ -1232,8 +1266,8 @@ public class KAPParser {
                 bounds = new Rectangle(Math.min(leftBound, rightBound), topBound, Math.max(rightBound - leftBound, leftBound - rightBound), bottomBound
                         - topBound);
                 logger.debug("Translated bounds " + bounds.toString());
-                mapReady = true;
 
+                mapReady = true;
             }
         } finally {
             reader.close();
@@ -1587,6 +1621,10 @@ public class KAPParser {
     // @Override
     public String getSoundings() {
         return this.UN;
+    }
+
+    public AffineTransform getTransform() {
+        return tx;
     }
 
     // @Override

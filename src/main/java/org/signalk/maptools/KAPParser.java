@@ -194,6 +194,7 @@ import java.util.Collections;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Vector;
+import java.util.logging.Level;
 
 import javax.imageio.ImageIO;
 
@@ -254,8 +255,10 @@ public class KAPParser {
     private String mapName = "no name";
     private String fileName;
     private String mapNum = "0"; //$NON-NLS-1$
-    private int mapWidthPixels = 0;
-    private int mapHeightPixels = 0;
+    protected int mapWidthPixels = 0;
+    protected int mapHeightPixels = 0;
+    private int rawMapWidthPixels = 0;
+    private int rawMapHeightPixels = 0;
     private int resolutionDPI = 1;
     /**
      * the scale as read in the KAP file header
@@ -482,9 +485,10 @@ public class KAPParser {
         return mask[depth];
     }
 
+
     /**
      * get the decompressed part of the image defined by left, top, width,
-     * height. the following pre-controls are made: if left
+     * height fro, the png image file. the following pre-controls are made: if left
      *
      * @param left
      * @param top
@@ -494,7 +498,8 @@ public class KAPParser {
      * @throws Exception
      */
     public synchronized BufferedImage getImage(int aLeft, int aTop, int aWidth, int aHeight) {
-        ByteBuffer buffer = fillBuffer();
+//        ByteBuffer buffer = fillBuffer();
+        BufferedImage tempImage = null;
         if (mapReady && aWidth > 0 && aHeight > 0) {
             // first control the width and height
             // int left = aLeft < bounds.x ? bounds.x : aLeft;
@@ -506,69 +511,20 @@ public class KAPParser {
             int width = (int) (left + aWidth > mapWidthPixels ? mapWidthPixels - left : aWidth);
             int height = (int) (top + aHeight > mapHeightPixels ? mapHeightPixels - top : aHeight);
             logger.debug("Image adjusted: aTop:" + top + ", aLeft:" + left + ", width:" + width + ", height:" + height);
-            // then control the left / top
-            // define the final visible bounds
-            visibleBounds = new Rectangle(left, top, width, height);
-            // this.coordTranslator.setOffsetX(left);
-            // this.coordTranslator.setOffsetY(top);
-            // define the multiplier factor, depending on the colorDepth (size
-            // for a color)
-            byte maskingMultiplier = getMaskingMultiplier(ifm);
-            // create the colorModel
-            // the different red green and blue color arrays must have been net
-            ColorPalette p = defaultPalette;
-            /*
-			 * switch (dayNightMode) {
-			 * case DAY:
-			 * p = dayPalette;
-			 * break;
-			 * case NIGHT:
-			 * p = nightPalette;
-			 * break;
-			 * default:
-			 * p = defaultPalette;
-			 * break;
-			 * }
-             */
-            ColorModel colorModel = new IndexColorModel(ifm, p.nbColors, p.reds, p.greens, p.blues, Transparency.OPAQUE);
-            // create a raster to set directly the index of colors in
-            try {
-                WritableRaster raster = colorModel.createCompatibleWritableRaster(width, height);
-                // create the associate image
-                image = new BufferedImage(colorModel, raster, false, null);
 
-                // loop on lines
-                for (int yImage = 0; yImage < height; yImage++) {
-                    int line = yImage + top;
-                    // go to the line in the raster area (see getLineAddress)
-                    if (line >= 0 && line < bounds.getMaxY()) {
-                        int address = getLineAddress(buffer, line);
-                        if (address > -1 && address < buffer.limit()) {
-                            buffer.position(address);
-                            int lineNumber = readLineNumber(buffer);
-                            // check that the line is the correct one
-                            // (lines in the encoded file starts at 1 for pixel
-                            // pos 0)
-                            //if (line == lineNumber || line == lineNumber - 1) {
-                            readRasterLine(buffer, raster, maskingMultiplier, yImage, left, width);
-                            //} else {
-                            // Activator.getDefault();
-                            // Log.severe(Activator.getBundle(), String.format(
-                            // "error in line %d (%d)", lineNumber,
-                            // line));
-                            //	logger.error(String.format("error in line %d (%d at address %d)", lineNumber, line, address));
-                            //}
-                        }
-                    }
-                }
+
+            //Get the image from the from the copy of the image held in the KAPParser instance.
+            try {
+                tempImage = image.getSubimage(left, top, width, height);
+
             } catch (Exception e) {
                 // Activator.getDefault();
                 // Log.severe(Activator.getBundle(), "error creating image", e);
                 logger.error(e.getMessage(), e);
-                image = null;
+                tempImage = null;
             }
         }
-        return image;
+        return tempImage;
     }
 
     private void readRasterLine(ByteBuffer buffer, WritableRaster raster, byte maskingMultiplier, int yImage, int left, int width) {
@@ -1052,6 +1008,8 @@ public class KAPParser {
                                     } else if (field.contains("RA=")) { //$NON-NLS-1$
                                         mapWidthPixels = Integer.parseInt(field.replace("RA=", "")); //$NON-NLS-1$ //$NON-NLS-2$
                                         mapHeightPixels = sc.nextInt();
+                                        rawMapWidthPixels = mapWidthPixels;
+                                        rawMapHeightPixels = mapHeightPixels;
                                     } else if (field.contains("DU=")) { //$NON-NLS-1$
                                         resolutionDPI = Integer.parseInt(field.replace("DU=", "")); //$NON-NLS-1$ //$NON-NLS-2$
                                     }
@@ -1441,6 +1399,13 @@ public class KAPParser {
     }
 
     /**
+     * @return the rawMapWidthPixels
+     */
+    public int getRawMapWidthPixels() {
+        return rawMapWidthPixels;
+    }
+
+    /**
      * @return the mapWidthPixels
      */
     public int getMapWidthPixels() {
@@ -1452,6 +1417,13 @@ public class KAPParser {
      */
     public int getMapHeightPixels() {
         return mapHeightPixels;
+    }
+
+    /**
+     * @return the rawMapHeightPixels
+     */
+    public int getRawMapHeightPixels() {
+        return rawMapHeightPixels;
     }
 
     /**

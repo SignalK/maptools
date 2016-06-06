@@ -174,6 +174,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
@@ -312,7 +313,7 @@ public class KAPParser {
      */
     private ColorPalette defaultPalette, dayPalette, nightPalette;
     private final Vector<MapReference> references;
-    private final Vector<Position> displayLimits;
+    private final Vector<Position> displayLimits; //displayLimits - the edges of the map, not including border
     // corrective phase factor
     private double correctiveLongitudePhase = 0;
 
@@ -485,10 +486,10 @@ public class KAPParser {
         return mask[depth];
     }
 
-
     /**
      * get the decompressed part of the image defined by left, top, width,
-     * height fro, the png image file. the following pre-controls are made: if left
+     * height fro, the png image file. the following pre-controls are made: if
+     * left
      *
      * @param left
      * @param top
@@ -511,7 +512,6 @@ public class KAPParser {
             int width = (int) (left + aWidth > mapWidthPixels ? mapWidthPixels - left : aWidth);
             int height = (int) (top + aHeight > mapHeightPixels ? mapHeightPixels - top : aHeight);
             logger.debug("Image adjusted: aTop:" + top + ", aLeft:" + left + ", width:" + width + ", height:" + height);
-
 
             //Get the image from the from the copy of the image held in the KAPParser instance.
             try {
@@ -1137,28 +1137,49 @@ public class KAPParser {
                 //
                 // build the coordinate translator
                 polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
+                tx = null;
+                if (polynomLoaded) {
+                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
+                } else {
+                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references, tx);
+                }
+                // convert from decimal minutes to decimal degrees!
+                coordTranslator.setLatShift(latitudeShift / 60d);
+                coordTranslator.setLonShift(longitudeShift / 60d);
                 mapReady = true;
-                BufferedImage tempImage = getImage();
-                saveAsPNG(tempImage, new File(fileName + ".png"));
+
+                BufferedImage tempImage = getImage();               
+                if (logger.isDebugEnabled()){
+                    saveAsPNG(tempImage, new File(fileName + ".png"));
+                    logger.debug("Saving "+fileName + ".png ");
+                }
+                Point2D[] corners = new Point2D.Double[4];
+                logger.debug("displayLimits - the edges of the map, not including border");
+                for (int i = 0; i < 4; i++) {
+                    Point temp = coordTranslator.getAbsolutePointFromPosition(displayLimits.get(i));
+                    corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
+                }
+                logger.info("skew = " + getSkew());
                 if (getSkew() == 0.) {
                     tx = null;
                 } else {
                     logger.debug("skew = " + getSkew());
                     tx = new AffineTransform();
-
                     // Rotate by skew about upper left corner
                     tx.rotate(-Math.toRadians(getSkew()));
-                    Point2D[] corners = new Point2D.Double[4];
-                    corners[0] = new Point2D.Double(0., 0.);
-                    corners[1] = new Point2D.Double((double) mapWidthPixels, 0.);
-                    corners[2] = new Point2D.Double((double) mapWidthPixels, (double) mapHeightPixels);
-                    corners[3] = new Point2D.Double(0., mapHeightPixels);
                     Point2D tempPt[] = new Point2D.Double[4];
                     tx.transform(corners, 0, tempPt, 0, corners.length);
-                    logger.debug("upLeft: " + corners[0].toString() + " --> " + tempPt[0].toString());
-                    logger.debug("upRight: " + corners[1].toString() + " --> " + tempPt[1].toString());
-                    logger.debug("lowLeft: " + corners[2].toString() + " --> " + tempPt[2].toString());
-                    logger.debug("lowRight: " + corners[3].toString() + " --> " + tempPt[3].toString());
+                    logger.debug("Rotated corners");
+                    for (int i = 0; i < corners.length; i++) {
+                        logger.debug(String.format("corner[%d]: (%7.1f, %7.1f) --> (%7.1f, %7.1f)", i, corners[i].getX(), corners[i].getY(), tempPt[i].getX(), tempPt[i].getY()));
+                    }
+                    AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+                    image = null;
+                    if (logger.isDebugEnabled()){
+                        image = op.filter(tempImage, null);
+                        saveAsPNG(image, new File(fileName + "_Rot.png"));
+                        logger.debug("Saving "+fileName + "_Rot.png " );
+                    }
 
                     // Calculate the minimum x and y corner values
                     Double minX = Double.MAX_VALUE;
@@ -1171,43 +1192,39 @@ public class KAPParser {
                             minY = tempPt[i].getY();
                         }
                     }
-                    Point2D[] transformedCorner = new Point2D.Double[4];
+                    Point2D[] transCorner = new Point2D.Double[4];
 
                     // translate to bring the corners back into the plotable area (x>0 and y>0)
-                    // the case for minX>0 and minY < 0 has not been checked
-                    if (minX < 0) {
-                        tx.translate(-minX * Math.cos(Math.toRadians(getSkew())), -minX * Math.sin(Math.toRadians(getSkew())));
-                    } else {
-                        tx.translate(-minY * Math.sin(Math.toRadians(getSkew())), -minY * Math.cos(Math.toRadians(getSkew())));
+//                    if (minX < 0) {
+                    double xTrans = -minX * Math.cos(Math.toRadians(getSkew())) + minY * Math.sin(Math.toRadians(getSkew()));
+                    double yTrans = -minX * Math.sin(Math.toRadians(getSkew())) - minY * Math.cos(Math.toRadians(getSkew()));
+                    tx.translate(xTrans, yTrans);
+                    tx.transform(corners, 0, transCorner, 0, corners.length);
+                    logger.debug("Rotated Translated display limits");
+                    for (int i = 0; i < corners.length; i++) {
+                        logger.debug(String.format("corner[%d]: (%7.1f, %7.1f) --> (%7.1f, %7.1f)", i, tempPt[i].getX(), tempPt[i].getY(), transCorner[i].getX(), transCorner[i].getY()));
                     }
-                    tx.transform(corners, 0, transformedCorner, 0, corners.length);
-                    logger.debug("upLeft: " + corners[0].toString() + " --> " + transformedCorner[0].toString());
-                    logger.debug("upRight: " + corners[1].toString() + " --> " + transformedCorner[1].toString());
-                    logger.debug("lowLeft: " + corners[2].toString() + " --> " + transformedCorner[2].toString());
-                    logger.debug("lowRight: " + corners[3].toString() + " --> " + transformedCorner[3].toString());
-                    mapWidthPixels = (int) Math.round(transformedCorner[1].getX());
-                    mapHeightPixels = (int) Math.round(transformedCorner[2].getY());
-                    AffineTransformOp op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+
+                    op = new AffineTransformOp(tx, AffineTransformOp.TYPE_BILINEAR);
+                    image = null;
                     image = op.filter(tempImage, null);
-                    saveAsPNG(image, new File(fileName + "_Rotated.png"));
-                }
 
-                if (polynomLoaded) {
-                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
-                } else {
-                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references, tx);
-                }
-                // convert from decimal minutes to decimal degrees!
-                coordTranslator.setLatShift(latitudeShift / 60d);
-                coordTranslator.setLonShift(longitudeShift / 60d);
+                    // The mapWidth/mapHeight includes the border!
+                    // to get only the chart, wothout the border, parse th corners for maxX and maxY values
+                    mapWidthPixels = image.getWidth();
+                    mapHeightPixels = image.getHeight();
 
-                logger.debug("displayLimits");
-                Position tempPos;
-                Point tempPoint;
-                for (int i = 0; i < displayLimits.size(); i++) {
-                    tempPos = displayLimits.get(i);
-                    tempPoint = coordTranslator.getAbsolutePointFromPosition(tempPos);
-                    logger.debug(tempPos.toString() + " x, y = " + tempPoint.x + "  " + tempPoint.y);
+                    if (logger.isDebugEnabled()){
+                        saveAsPNG(image, new File(fileName + "_RotTrans.png"));
+                        logger.debug("Saving "+fileName + "_Rot.png ");
+                    }
+                    
+                    // rebuild the CoordsPolynomTranslator with the rotation-translation transform
+                    if (polynomLoaded) {
+                        coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
+                    } else {
+                        coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references, tx);
+                    }
                 }
 
                 mapUseableSector = extractVisibleSectorFromBounds(displayLimits);
@@ -1273,30 +1290,27 @@ public class KAPParser {
         // and calculatge the map height and width in pixels
         logger.debug(" marginTop:" + marginTop + ", marginBottom:" + marginBottom + ", marginLeft:" + marginLeft + ", marginRight:" + marginRight);
         logger.debug(" maxLat:" + maxLat + " minLon:" + minLon);
-        // get point corresponding to maxLAt, minLon
+        // get point corresponding to maxLat, minLon
+        logger.debug("Point corresponding to (maxLat, minLon)");
         Point p = coordTranslator.getAbsolutePointFromPosition(minLon, maxLat);
-        logger.debug(" p(maxLat, minLon):" + p.getLocation().x + ", " + p.getLocation().y);
+        logger.debug(String.format("(maxLat, minLon) = (%12.7f, %12.7f): --> (%7d, %7d)", maxLat, minLon, p.x, p.y));
 
-//                logger.debug(" position(upper left corner):" + coordTranslator.getAbsolutePositionFromPoint(new Point(0, 0)).getLatitude()+", "+coordTranslator.getAbsolutePositionFromPoint(new Point(0, 0)).getLongitude());
+        // upper left in transformed oordinates
         p.x = 0; // p.x-marginLeft;
         p.y = 0;// p.y-marginTop-28;
         Position topLeft = coordTranslator.getAbsolutePositionFromPoint(p);
-        logger.debug("topLeft=" + topLeft + " x,y = " + p.x + "," + p.y);
+        logger.debug(String.format("topLeft: (%12.7f, %12.7f): --> (%7d, %7d)", topLeft.getLatitude(), topLeft.getLongitude(), p.x, p.y));
 
         //getting bottom right
-        p = coordTranslator.getAbsolutePointFromPosition(maxLon, minLat);
-        p.x = getMapWidthPixels();// /p.x+(getMapWidthPixels()-marginRight);
-        p.y = getMapHeightPixels();// p.y+(getMapHeightPixels()-marginBottom);
-        Position bottomRight = coordTranslator.getAbsolutePositionFromPoint(p);
-        logger.debug("bottomRight=" + bottomRight + " x,y = " + p.x + "," + p.y);
+        Point pix;
+        pix = coordTranslator.getAbsolutePointFromPosition(maxLon, minLat);
+        Position bottomRight = coordTranslator.getAbsolutePositionFromPoint(pix);
+        logger.debug(String.format("bottomRight: (%12.7f, %12.7f): --> (%7d, %7d)", bottomRight.getLatitude(), bottomRight.getLongitude(), pix.x, pix.y));
 
         // this is for crossing night line
-        p = coordTranslator.getAbsolutePointFromPosition(maxNegLon, minLat);
-        p.x = getMapWidthPixels();// p.x+(getMapWidthPixels()-marginRight);
-        p.y = getMapHeightPixels();// p.y+(getMapHeightPixels()-marginBottom);
-        logger.debug(String.format("(MapWidth, MapHeight) = (%d, %d)", p.x, p.y));
-        Position negRight = coordTranslator.getAbsolutePositionFromPoint(p);
-        logger.debug("negRight=" + negRight);
+        pix = coordTranslator.getAbsolutePointFromPosition(maxNegLon, minLat);
+        Position negRight = coordTranslator.getAbsolutePositionFromPoint(pix);
+        logger.debug(String.format("negRight: (%12.7f, %12.7f): --> (%7d, %7d)", negRight.getLatitude(), negRight.getLongitude(), pix.x, pix.y));
 
         if (isCrossingDayNightLine(topLeft, bottomRight)) {
             topLeft = new Position(maxLat, maxLon);

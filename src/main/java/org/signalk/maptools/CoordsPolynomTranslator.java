@@ -171,17 +171,21 @@ public class CoordsPolynomTranslator {
     public Point getAbsolutePointFromPosition(double lon, double lat) {
         Point res = new Point(0, 0);
         Point rotatedPoint = new Point(0, 0);
+        StringBuffer sb = new StringBuffer();
         lon = lon - longitudeShift;
         lat = lat - latitudeShift;
+        sb.append(String.format("(lat, lon) = (%12.8f, %12.8f) --> ", lat, lon));
         double lon2 = (lon < 0) ? lon + cph : lon - cph;
         res.x = (int) wpxPoly.getValue(lon2, lat);
         res.y = (int) wpyPoly.getValue(lon2, lat);
-        logger.debug("NotTransformed x,y = " + res.x + ", " + res.y);
+        sb.append("("+res.x+", "+res.y+")");
         if (at == null) {
+            logger.debug(sb.toString());
             return res;
         } else {
             at.transform(res, rotatedPoint);
-            logger.debug("Transformed x,y = " + rotatedPoint.x + ", " + rotatedPoint.y);
+            sb.append(" --> ("+rotatedPoint.x+", "+rotatedPoint.y+")");
+            logger.debug(sb.toString());
             return rotatedPoint;
         }
     }
@@ -196,13 +200,16 @@ public class CoordsPolynomTranslator {
     public Position getAbsolutePositionFromPoint(Point q) {
 
         Point p = new Point(0, 0);
+        StringBuffer sb = new StringBuffer();
+        sb.append("(x,y) = ("+q.x+", "+q.y+") -->");
         if (at == null) {
             p = q;
         } else {
-            logger.debug("Transformed x,y = " + q.x + ", " + q.y);
+//            logger.debug("Transformed x,y = " + q.x + ", " + q.y);
             try {
                 at.inverseTransform(q, p);
-                logger.debug("Not Transformed x,y = " + p.x + ", " + p.y);
+                sb.append("("+p.x+", "+p.y+")");
+//                logger.debug("Not Transformed x,y = " + p.x + ", " + p.y);
             } catch (NoninvertibleTransformException ex) {
                 Logger.getLogger(CoordsPolynomTranslator.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -212,6 +219,8 @@ public class CoordsPolynomTranslator {
         lon = lon + longitudeShift;
         double lat = pwyPoly.getValue(p.x, p.y);
         lat = lat + latitudeShift;
+        sb.append(String.format(" --> (%12.8f, %12.8f)", lat, lon));
+        logger.debug(sb.toString());
         return new Position(lat, lon);
     }
 

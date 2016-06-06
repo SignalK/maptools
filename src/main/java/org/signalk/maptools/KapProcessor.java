@@ -65,7 +65,7 @@ public class KapProcessor {
 
 	private void log(Object msg) {
 		StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
-		StackTraceElement e = stacktrace[3];//maybe this number needs to be corrected
+		StackTraceElement e = stacktrace[2];//maybe this number needs to be corrected
 		String methodName = e.getMethodName();
 		if (logger.isDebugEnabled()) {
 			logger.debug(methodName + " " + msg);
@@ -101,7 +101,6 @@ public class KapProcessor {
 
 		log("RBerliner maptools");
 		log(parser.getName());
-		log("Skew = " + parser.getSkew());
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				  + parser.getBounds().width);
 
@@ -196,6 +195,7 @@ public class KapProcessor {
 		if (pixelY > parser.getMapHeightPixels() && pixely > parser.getMapHeightPixels()) {
 			return;
 		}
+                
 		if (pixelX < 0 && pixelx < 0) {
 			return;
 		}
@@ -223,7 +223,6 @@ public class KapProcessor {
 			log("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
-//			logger.error(e.getMessage(), e);
 			logger.error("\tError", e);
 
 		}

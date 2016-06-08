@@ -170,11 +170,11 @@
  */
 package org.signalk.maptools;
 
+import java.awt.List;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
@@ -195,7 +195,6 @@ import java.util.Collections;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Vector;
-import java.util.logging.Level;
 
 import javax.imageio.ImageIO;
 
@@ -956,6 +955,7 @@ public class KAPParser {
                             sc.nextInt();// num ignored
                             Position pos = new Position(sc.nextDouble(), sc.nextDouble());
                             displayLimits.add(pos);
+                            logger.debug("ply " + displayLimits.lastElement().toString());
                             mode = Mode.DEFAULT;
                         }
                     } else if (line.toUpperCase().startsWith("CPH/")) { //$NON-NLS-1$
@@ -1153,21 +1153,30 @@ public class KAPParser {
                     saveAsPNG(tempImage, new File(fileName + ".png"));
                     logger.debug("Saving "+fileName + ".png ");
                 }
-                Point2D[] corners = new Point2D.Double[4];
+                Point2D.Double [] corners = new Point2D.Double[displayLimits.size()];
                 logger.debug("displayLimits - the edges of the map, not including border");
-                for (int i = 0; i < 4; i++) {
+                for (int i = 0; i < displayLimits.size(); i++) {
                     Point temp = coordTranslator.getAbsolutePointFromPosition(displayLimits.get(i));
                     corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
                 }
+                
                 logger.info("skew = " + getSkew());
                 if (getSkew() == 0.) {
                     tx = null;
                 } else {
-                    logger.debug("skew = " + getSkew());
                     tx = new AffineTransform();
-                    // Rotate by skew about upper left corner
-                    tx.rotate(-Math.toRadians(getSkew()));
-                    Point2D tempPt[] = new Point2D.Double[4];
+                    
+                    // get the original bounds from the corners;
+                    Rectangle2D.Double originalBounds = getBounds(corners);
+                    
+                    // get the middle of the Rectangle
+                    double midX = originalBounds.x + originalBounds.width/2.;
+                    double midY = originalBounds.y + originalBounds.height/2.;
+                    
+                    // Rotate by skew about middle of chart
+                    tx.rotate(-Math.toRadians(getSkew()), midX, midY);
+                    Point2D.Double tempPt[] = new Point2D.Double[displayLimits.size()];
+
                     tx.transform(corners, 0, tempPt, 0, corners.length);
                     logger.debug("Rotated corners");
                     for (int i = 0; i < corners.length; i++) {
@@ -1181,23 +1190,13 @@ public class KAPParser {
                         logger.debug("Saving "+fileName + "_Rot.png " );
                     }
 
-                    // Calculate the minimum x and y corner values
-                    Double minX = Double.MAX_VALUE;
-                    Double minY = Double.MAX_VALUE;
-                    for (int i = 0; i < corners.length; i++) {
-                        if (minX > tempPt[i].getX()) {
-                            minX = tempPt[i].getX();
-                        }
-                        if (minY > tempPt[i].getY()) {
-                            minY = tempPt[i].getY();
-                        }
-                    }
-                    Point2D[] transCorner = new Point2D.Double[4];
+                    Rectangle2D.Double rotatedBounds = getBounds(tempPt);
+                    Point2D[] transCorner = new Point2D.Double[displayLimits.size()];
 
                     // translate to bring the corners back into the plotable area (x>0 and y>0)
 //                    if (minX < 0) {
-                    double xTrans = -minX * Math.cos(Math.toRadians(getSkew())) + minY * Math.sin(Math.toRadians(getSkew()));
-                    double yTrans = -minX * Math.sin(Math.toRadians(getSkew())) - minY * Math.cos(Math.toRadians(getSkew()));
+                    double xTrans = -rotatedBounds.x * Math.cos(Math.toRadians(getSkew())) + rotatedBounds.y * Math.sin(Math.toRadians(getSkew()));
+                    double yTrans = -rotatedBounds.x * Math.sin(Math.toRadians(getSkew())) - rotatedBounds.y * Math.cos(Math.toRadians(getSkew()));
                     tx.translate(xTrans, yTrans);
                     tx.transform(corners, 0, transCorner, 0, corners.length);
                     logger.debug("Rotated Translated display limits");
@@ -1250,6 +1249,40 @@ public class KAPParser {
     }
 
     /**
+     * extract the UpperLeft,lowerRight and middle points from the input array points
+     *
+     * @param points
+     * @return the bounding Rectangle2D.Double 
+     */
+    public Rectangle2D.Double getBounds(Point2D.Double[] points) {
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+
+        double tempX = 0.;
+        double tempY = 0.;
+        for (int i = 0; i < points.length; i++){
+            tempX = points[i].x;
+            tempY = points[i].y;
+            if (minX > tempX){
+                minX = tempX;
+            }
+            if (maxX < tempX){
+                maxX = tempX;
+            }
+            if (minY > tempY){
+                minY = tempY;
+            }
+            if (maxY < tempY){
+                maxY = tempY;
+            }
+        }
+        Rectangle2D.Double results = new Rectangle2D.Double(minX, minY, maxX - minX, maxY - minY);
+        return results;
+    }
+    
+    /**
      * extract the usable Sector from the list of bounds (found in PLY/
      * sections).
      *
@@ -1296,10 +1329,9 @@ public class KAPParser {
         logger.debug(String.format("(maxLat, minLon) = (%12.7f, %12.7f): --> (%7d, %7d)", maxLat, minLon, p.x, p.y));
 
         // upper left in transformed oordinates
-        p.x = 0; // p.x-marginLeft;
-        p.y = 0;// p.y-marginTop-28;
-        Position topLeft = coordTranslator.getAbsolutePositionFromPoint(p);
-        logger.debug(String.format("topLeft: (%12.7f, %12.7f): --> (%7d, %7d)", topLeft.getLatitude(), topLeft.getLongitude(), p.x, p.y));
+        Point pp = new Point(0, 0);
+        Position topLeft = coordTranslator.getAbsolutePositionFromPoint(pp);
+        logger.debug(String.format("topLeft: (%12.7f, %12.7f): --> (%7d, %7d)", topLeft.getLatitude(), topLeft.getLongitude(), pp.x, pp.y));
 
         //getting bottom right
         Point pix;

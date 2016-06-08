@@ -104,7 +104,8 @@ public class KapProcessor {
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				  + parser.getBounds().width);
 
-		tileRes.append("      <Title>" + parser.getMapName() + "</Title>\n");
+		// take the & out of the title or get SAXE Parse Errors
+                tileRes.append("      <Title>" + parser.getMapName().replace("&", "and") + "</Title>\n");
 		tileRes.append("      <Abstract></Abstract>\n");
 		tileRes.append("      <SRS>EPSG:900913</SRS>\n");
 
@@ -216,7 +217,12 @@ public class KapProcessor {
 		}
 		log("Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
 
-		File png = new File(pyramidPath, kapName + "/" + url + ".png");
+                // parser.getImage will fail if width or height is zero
+                if ((width <= 0)||(height<=0)){
+                    return;
+                }
+                
+                File png = new File(pyramidPath, kapName + "/" + url + ".png");
 		png.getParentFile().mkdirs();
 		try {
 			BufferedImage mapImage = parser.getImage((int) pixelx, (int) pixelY, width, height);
@@ -224,7 +230,6 @@ public class KapProcessor {
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
 			logger.error("\tError", e);
-
 		}
 	}
 

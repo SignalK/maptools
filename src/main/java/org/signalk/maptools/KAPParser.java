@@ -257,8 +257,8 @@ public class KAPParser {
     private String mapNum = "0"; //$NON-NLS-1$
     protected int mapWidthPixels = 0;
     protected int mapHeightPixels = 0;
-    private int rawMapWidthPixels = 0;
-    private int rawMapHeightPixels = 0;
+//    private int rawMapWidthPixels = 0;
+//    private int rawMapHeightPixels = 0;
     private int resolutionDPI = 1;
     /**
      * the scale as read in the KAP file header
@@ -1008,8 +1008,8 @@ public class KAPParser {
                                     } else if (field.contains("RA=")) { //$NON-NLS-1$
                                         mapWidthPixels = Integer.parseInt(field.replace("RA=", "")); //$NON-NLS-1$ //$NON-NLS-2$
                                         mapHeightPixels = sc.nextInt();
-                                        rawMapWidthPixels = mapWidthPixels;
-                                        rawMapHeightPixels = mapHeightPixels;
+//                                        rawMapWidthPixels = mapWidthPixels;
+//                                        rawMapHeightPixels = mapHeightPixels;
                                     } else if (field.contains("DU=")) { //$NON-NLS-1$
                                         resolutionDPI = Integer.parseInt(field.replace("DU=", "")); //$NON-NLS-1$ //$NON-NLS-2$
                                     }
@@ -1444,12 +1444,12 @@ public class KAPParser {
         return mapNum;
     }
 
-    /**
-     * @return the rawMapWidthPixels
-     */
-    public int getRawMapWidthPixels() {
-        return rawMapWidthPixels;
-    }
+//    /**
+//     * @return the rawMapWidthPixels
+//     */
+//    public int getRawMapWidthPixels() {
+//        return rawMapWidthPixels;
+//    }
 
     /**
      * @return the mapWidthPixels
@@ -1465,13 +1465,13 @@ public class KAPParser {
         return mapHeightPixels;
     }
 
-    /**
-     * @return the rawMapHeightPixels
-     */
-    public int getRawMapHeightPixels() {
-        return rawMapHeightPixels;
-    }
-
+//    /**
+//     * @return the rawMapHeightPixels
+//     */
+//    public int getRawMapHeightPixels() {
+//        return rawMapHeightPixels;
+//    }
+//
     /**
      * @return the datum
      */

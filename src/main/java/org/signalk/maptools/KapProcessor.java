@@ -45,7 +45,6 @@ public class KapProcessor {
 	public void extractImage(File kapFile) throws Exception {
 		String fileName = kapFile.getAbsolutePath();
 		KAPParser parser = new KAPParser(fileName);
-		log("RBerliner maptools");
 		log(parser.getName());
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
 		log(parser.getDatum());
@@ -99,7 +98,6 @@ public class KapProcessor {
 
 		parser = new KAPParser(kapFile.getAbsolutePath());
 
-		log("RBerliner maptools");
 		log(parser.getName());
 		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				  + parser.getBounds().width);

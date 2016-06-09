@@ -1047,7 +1047,7 @@ public class KAPParser {
 							while (sc.hasNext()) {
 								String field = sc.next();
 								if (field.contains("SC=")) { //$NON-NLS-1$
-									mapFileScale = Integer.parseInt(field.replace("SC=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+									mapFileScale = Math.round(Float.parseFloat(field.replace("SC=", ""))); //$NON-NLS-1$ //$NON-NLS-2$
 								} else if (field.contains("GD=")) { //$NON-NLS-1$
 									datum = field.replace("GD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
 								} else if (field.contains("PR=")) { //$NON-NLS-1$
@@ -1060,6 +1060,7 @@ public class KAPParser {
 									SP = field.replace("SP=", ""); //$NON-NLS-1$ //$NON-NLS-2$
 								} else if (field.contains("SK=")) { //$NON-NLS-1$
 									SK = Float.parseFloat(field.replace("SK=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+									//skew angle - the image needs rotating before processing...
 								} else if (field.contains("UN=")) { //$NON-NLS-1$
 									UN = field.replace("UN=", ""); //$NON-NLS-1$ //$NON-NLS-2$
 								} else if (field.contains("SD=")) { //$NON-NLS-1$

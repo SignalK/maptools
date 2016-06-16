@@ -659,7 +659,8 @@ public class KAPParser {
                     for (boolean endOfRasterData = false; !endOfRasterData;) {
                         int lineNumber = readLineNumber(buffer);
                         int y = lineNumber - offsetY;
-                        int multiplier = 1;
+//                        logger.info("lineNumber = "+lineNumber);
+								int multiplier = 1;
                         byte pixel = 0;
                         int x = 0;
                         for (boolean eol = false; !eol;) {
@@ -779,15 +780,14 @@ public class KAPParser {
     private int readLineNumber(ByteBuffer buff) {
         int res = 0;
         byte b = 0;
+        int maskB = 0;
         do {
             b = buff.get();
-            // cheat to have an unsigned byte
-            int bi = b;
-            if (bi < 0) {
-                bi = bi + 0x100 & 0xff;
+            maskB = b & 0x7f;
+            res = res + maskB;
+            if (b < 0){
+                res = res*128;
             }
-            // yBuffer is the line in the raster buffer
-            res = ((res & 0x7F) << 7) + bi;
         } while (b < 0);
         return res;
     }
@@ -1148,7 +1148,7 @@ public class KAPParser {
                 coordTranslator.setLonShift(longitudeShift / 60d);
                 mapReady = true;
 
-                BufferedImage tempImage = getImage();               
+                BufferedImage tempImage = getImage();
                 if (logger.isDebugEnabled()){
                     saveAsPNG(tempImage, new File(fileName + ".png"));
                     logger.debug("Saving "+fileName + ".png ");
@@ -1159,20 +1159,20 @@ public class KAPParser {
                     Point temp = coordTranslator.getAbsolutePointFromPosition(displayLimits.get(i));
                     corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
                 }
-                
+
                 logger.info("skew = " + getSkew());
                 if (getSkew() == 0.) {
                     tx = null;
                 } else {
                     tx = new AffineTransform();
-                    
+
                     // get the original bounds from the corners;
                     Rectangle2D.Double originalBounds = getBounds(corners);
-                    
+
                     // get the middle of the Rectangle
                     double midX = originalBounds.x + originalBounds.width/2.;
                     double midY = originalBounds.y + originalBounds.height/2.;
-                    
+
                     // Rotate by skew about middle of chart
                     tx.rotate(-Math.toRadians(getSkew()), midX, midY);
                     Point2D.Double tempPt[] = new Point2D.Double[displayLimits.size()];
@@ -1217,7 +1217,7 @@ public class KAPParser {
                         saveAsPNG(image, new File(fileName + "_RotTrans.png"));
                         logger.debug("Saving "+fileName + "_Rot.png ");
                     }
-                    
+
                     // rebuild the CoordsPolynomTranslator with the rotation-translation transform
                     if (polynomLoaded) {
                         coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
@@ -1252,7 +1252,7 @@ public class KAPParser {
      * extract the UpperLeft,lowerRight and middle points from the input array points
      *
      * @param points
-     * @return the bounding Rectangle2D.Double 
+     * @return the bounding Rectangle2D.Double
      */
     public Rectangle2D.Double getBounds(Point2D.Double[] points) {
         double minX = Double.MAX_VALUE;
@@ -1281,7 +1281,7 @@ public class KAPParser {
         Rectangle2D.Double results = new Rectangle2D.Double(minX, minY, maxX - minX, maxY - minY);
         return results;
     }
-    
+
     /**
      * extract the usable Sector from the list of bounds (found in PLY/
      * sections).

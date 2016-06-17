@@ -1234,11 +1234,13 @@ public class KAPParser {
                 int bottomBound = p.y;
                 int rightBound = p.x;
 
+
                 // max and min are set to correct the issue with map
                 // across the 180 longitude
                 bounds = new Rectangle(Math.min(leftBound, rightBound), topBound, Math.max(rightBound - leftBound, leftBound - rightBound), bottomBound
                         - topBound);
                 logger.debug("Translated bounds " + bounds.toString());
+
 
                 mapReady = true;
             }

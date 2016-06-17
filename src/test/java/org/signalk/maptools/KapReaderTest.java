@@ -45,8 +45,10 @@ public class KapReaderTest {
 		// String kapName = "US411_1";
 		//String kapName = "NZ61401";
 		//String kapName = "UK_6868_1";
-		KapProcessor processor = new KapProcessor();
+		//String kapName = "11535_1";
 		String kapName = "NZ61401";
+		KapProcessor processor = new KapProcessor();
+		
 		File mapPath = new File("./src/test/resources/");
 		File kapFile = new File(mapPath, kapName+".KAP");
 		File target = new File(mapPath, kapName);

@@ -659,8 +659,7 @@ public class KAPParser {
                     for (boolean endOfRasterData = false; !endOfRasterData;) {
                         int lineNumber = readLineNumber(buffer);
                         int y = lineNumber - offsetY;
-//                        logger.info("lineNumber = "+lineNumber);
-								int multiplier = 1;
+			int multiplier = 1;
                         byte pixel = 0;
                         int x = 0;
                         for (boolean eol = false; !eol;) {

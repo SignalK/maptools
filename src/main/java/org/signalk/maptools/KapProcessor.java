@@ -45,18 +45,19 @@ public class KapProcessor {
 	public void extractImage(File kapFile) throws Exception {
 		String fileName = kapFile.getAbsolutePath();
 		KAPParser parser = new KAPParser(fileName);
-		log(parser.getName());
-		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
-		log(parser.getDatum());
-		log(parser.getMapFileScale());
-                log(parser.getSkew());
-		//log(parser.getRawMapHeightPixels());
-		//log(parser.getRawMapWidthPixels());
-		log(parser.getMapHeightPixels());
-		log(parser.getMapWidthPixels());
-		log(parser.getProjectionName());
-		log(parser.getProjectionParameter());
-		log(parser.getSoundingReference());
+
+		logger.debug(parser.getName());
+		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
+		logger.debug(parser.getDatum());
+		logger.debug(parser.getMapFileScale());
+                logger.debug(parser.getSkew());
+//		logger.debug(parser.getRawMapHeightPixels());
+//		logger.debug(parser.getRawMapWidthPixels());
+		logger.debug(parser.getMapHeightPixels());
+		logger.debug(parser.getMapWidthPixels());
+		logger.debug(parser.getProjectionName());
+		logger.debug(parser.getProjectionParameter());
+		logger.debug(parser.getSoundingReference());
 
 		parser.saveAsPNG(parser.getImage(), new File(fileName.substring(0, fileName.lastIndexOf(".")) + ".png"));
 
@@ -98,8 +99,8 @@ public class KapProcessor {
 
 		parser = new KAPParser(kapFile.getAbsolutePath());
 
-		log(parser.getName());
-		log("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
+		logger.debug(parser.getName());
+		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
 				  + parser.getBounds().width);
 
 		// take the & out of the title or get SAXE Parse Errors
@@ -111,9 +112,9 @@ public class KapProcessor {
 		Position nw = parser.getMapUseableSector().getNorthWest();
 		Position se = parser.getMapUseableSector().getSouthEast();
 
-		log("nw, lat=" + nw.getLatitude() + ", lon=" + nw.getLongitude());
-		log("center, lat=" + center.getLatitude() + ", lon=" + center.getLongitude());
-		log("se, lat=" + se.getLatitude() + ", lon=" + se.getLongitude());
+		logger.debug("nw, lat=" + nw.getLatitude() + ", lon=" + nw.getLongitude());
+		logger.debug("center, lat=" + center.getLatitude() + ", lon=" + center.getLongitude());
+		logger.debug("se, lat=" + se.getLatitude() + ", lon=" + se.getLongitude());
 
 		tileRes.append("      <BoundingBox minx=\"" + nw.getLongitude() + "\" miny=\"" + se.getLatitude() + "\" maxx=\"" + se.getLongitude() + "\" maxy=\""
 				  + nw.getLatitude() + "\"/>\n");
@@ -121,11 +122,11 @@ public class KapProcessor {
 		tileRes.append("      <TileFormat width=\"256\" height=\"256\" mime-type=\"image/png\" extension=\"png\"/>\n");
 		tileRes.append("      <TileSets profile=\"mercator\">\n");
 
-		log("getMapWidthPixels:" + parser.getMapWidthPixels() + ", getMapHeightPixels:" + parser.getMapHeightPixels());
+		logger.debug("getMapWidthPixels:" + parser.getMapWidthPixels() + ", getMapHeightPixels:" + parser.getMapHeightPixels());
 
 		// double xToPixels=StrictMath.abs(Double.valueOf(parser.getBounds().width)/parser.getMapWidthPixels());
 		coordTranslator = parser.getCoordTranslator();
-		// log("xToPixels:"+xToPixels);
+		// logger.debug("xToPixels:"+xToPixels);
 		zMin = Sector.getMinUsefulZoom(nw, se);
 		zMax = zMin + 4;
 		for (int zoom = zMin; zoom < zMax; zoom++) {
@@ -137,7 +138,7 @@ public class KapProcessor {
 			int yTile = Sector.getTileY(nw.getLatitude(), zoom);
 			int XTile = Sector.getTileX(se.getLongitude(), zoom);
 			int YTile = Sector.getTileY(se.getLatitude(), zoom);
-			log("Zoom = "+ zoom+" Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
+			logger.debug("Zoom = "+ zoom+" Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
 
 			for (int i = xTile; i <= XTile; i++) {
 				for (int y = YTile - 1; y <= yTile; y++) {
@@ -148,7 +149,7 @@ public class KapProcessor {
 
 		tileRes.append("   </TileSets>\n");
 		tileRes.append("</TileMap>\n");
-		log(tileRes.toString());
+		logger.debug(tileRes.toString());
 
 		// write out
 		File tileResFile = new File(pyramidPath, kapName + "/" + TILEMAPRESOURCE_XML);
@@ -169,14 +170,14 @@ public class KapProcessor {
 	private void createTiles(File pyramidPath, String kapName, int zoom, int i, int y) {
 
 		String url = "" + zoom + "/" + i + "/" + y;
-		log("url=" + url);
+		logger.debug("url=" + url);
 
 		// get lat/lon box
 		double south = Sector.tile2lat(y, zoom);
 		double north = Sector.tile2lat(y + 1, zoom);
 		double west = Sector.tile2lon(i, zoom);
 		double east = Sector.tile2lon(i + 1, zoom);
-		log("north:" + north + ", south:" + south + ", east:" + east + ", west:" + west);
+		logger.debug("north:" + north + ", south:" + south + ", east:" + east + ", west:" + west);
 
 		// convert to pixels
 		Point nWest = coordTranslator.getAbsolutePointFromPosition(west, north);
@@ -185,7 +186,7 @@ public class KapProcessor {
 		int pixely = sEast.y;
 		int pixelx = nWest.x;
 		int pixelX = sEast.x;
-		log(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
+		logger.debug(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
 
 		// skip if out of frame
 		if (pixelY < 0 && pixely < 0) {
@@ -194,7 +195,7 @@ public class KapProcessor {
 		if (pixelY > parser.getMapHeightPixels() && pixely > parser.getMapHeightPixels()) {
 			return;
 		}
-                
+
 		if (pixelX < 0 && pixelx < 0) {
 			return;
 		}
@@ -213,18 +214,18 @@ public class KapProcessor {
 		if (width > parser.getMapWidthPixels()) {
 			width = parser.getMapWidthPixels();
 		}
-		log("Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
+		logger.debug("Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
 
                 // parser.getImage will fail if width or height is zero
                 if ((width <= 0)||(height<=0)){
                     return;
                 }
-                
+
                 File png = new File(pyramidPath, kapName + "/" + url + ".png");
 		png.getParentFile().mkdirs();
 		try {
 			BufferedImage mapImage = parser.getImage((int) pixelx, (int) pixelY, width, height);
-			log("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
+			logger.debug("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
 			logger.error("\tError", e);
@@ -257,18 +258,18 @@ public class KapProcessor {
 		// double heightScale = maxHeight/(double)height;
 		// scale to 256x256 size
 		mapImage = Scalr.resize(mapImage, Scalr.Mode.FIT_TO_WIDTH, (int) Math.round(256 / widthRatio), (int) Math.round(256 / heightRatio), Scalr.OP_ANTIALIAS);
-		log("  tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+		logger.debug("  tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
 
 		// image may need padding to be square
 		if (mapImage.getHeight() < 256 || mapImage.getWidth() < 256) {
-			log("  Padding tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
+			logger.debug("  Padding tile image " + mapImage.getWidth() + "x" + mapImage.getHeight());
 
 			WritableRaster raster = mapImage.getColorModel().createCompatibleWritableRaster(256, 256);
 			// create the associate image
 			BufferedImage fullImage = new BufferedImage(mapImage.getColorModel(), raster, false, null);
 			int offsetY = (pixelY < 0 ? 256 - mapImage.getHeight() : 0);
 			int offsetX = (pixelx < 0 ? 256 - mapImage.getWidth() : 0);
-			log("  Padding offset x:" + offsetX + ", y:" + offsetY);
+			logger.debug("  Padding offset x:" + offsetX + ", y:" + offsetY);
 
 			addImage(fullImage, mapImage, 1, offsetX, offsetY);
 			parser.saveAsPNG(fullImage, png);

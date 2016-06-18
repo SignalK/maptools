@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <TileMap version="1.0.0" tilemapservice="http://tms.osgeo.org/1.0.0">
+      <Title>Tasman Bay</Title>
+      <Abstract></Abstract>
+      <SRS>EPSG:900913</SRS>
+      <BoundingBox minx="172.708281425358" miny="-41.275000071550146" maxx="173.91669381383224" maxy="-40.6770599862146"/>
+      <Origin x="172.708281425358" y="-40.6770599862146" />
+      <TileFormat width="256" height="256" mime-type="image/png" extension="png"/>
+      <TileSets profile="mercator">
+        <TileSet href="9" units-per-pixel="305.7481130859375" order="9"/>
+        <TileSet href="10" units-per-pixel="152.87405654296876" order="10"/>
+        <TileSet href="11" units-per-pixel="76.43702827148438" order="11"/>
+        <TileSet href="12" units-per-pixel="38.21851413574219" order="12"/>
+        <TileSet href="13" units-per-pixel="19.109257067871095" order="13"/>
+   </TileSets>
+</TileMap>

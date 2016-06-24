@@ -170,7 +170,9 @@
  */
 package org.signalk.maptools;
 
-import java.awt.List;
+import java.awt.AlphaComposite;
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
@@ -191,12 +193,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
+import static javax.swing.Spring.height;
+import static javax.swing.Spring.width;
 
 import org.apache.log4j.Logger;
 
@@ -1158,6 +1161,22 @@ public class KAPParser {
                     Point temp = coordTranslator.getAbsolutePointFromPosition(displayLimits.get(i));
                     corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
                 }
+                
+                // trim off the borders
+                Rectangle2D chartBounds = getBounds(corners);
+                Graphics2D g = image.createGraphics();
+                g.setComposite(AlphaComposite.Src);
+                g.setColor(new Color(0, 0, 0, 0));
+                g.fillRect(0, 0, mapWidthPixels, (int)chartBounds.getY());
+                g.fillRect(0, 0, (int)chartBounds.getX(), mapHeightPixels);
+                g.fillRect(0, (int)chartBounds.getY()+(int)chartBounds.getHeight(), mapWidthPixels, mapHeightPixels - (int)chartBounds.getHeight()-(int)chartBounds.getY());
+                g.fillRect((int)(chartBounds.getX()+chartBounds.getWidth()), 0, mapWidthPixels - (int)(chartBounds.getWidth() - chartBounds.getX()), mapHeightPixels);
+                g.dispose();
+                if (logger.isDebugEnabled()){
+                    saveAsPNG(tempImage, new File(fileName + "Clipped.png"));
+                    logger.debug("Saving "+fileName + ".png ");
+                }
+                
 
                 logger.info("skew = " + getSkew());
                 if (getSkew() == 0.) {

@@ -45,7 +45,6 @@ public class KapProcessor {
 	public void extractImage(File kapFile) throws Exception {
 		String fileName = kapFile.getAbsolutePath();
 		KAPParser parser = new KAPParser(fileName);
-
 		logger.debug(parser.getName());
 		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
 		logger.debug(parser.getDatum());

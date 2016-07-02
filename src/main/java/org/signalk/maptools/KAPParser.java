@@ -363,7 +363,7 @@ public class KAPParser {
     private String NE = ""; //$NON-NLS-1$
     private String ND = ""; //$NON-NLS-1$
     private String BD = ""; //$NON-NLS-1$
-    private CoordsPolynomTranslator coordTranslator;
+    private CoordsPolynomTrans coordTranslator;
 
     /**
      * @return true is the map is ready for display.
@@ -991,6 +991,7 @@ public class KAPParser {
                         mode = Mode.PWY;
                     } else if (line.toUpperCase().startsWith("ERR/")) { //$NON-NLS-1$
                         // not treated yet
+                        logger.debug(line);
                         mode = Mode.DEFAULT;
                     }
 
@@ -1141,9 +1142,9 @@ public class KAPParser {
                 polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
                 tx = null;
                 if (polynomLoaded) {
-                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
+                    coordTranslator = new CoordsPolynomTrans(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
                 } else {
-                    coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references, tx);
+                    coordTranslator = new CoordsPolynomTrans(correctiveLongitudePhase, references, tx);
                 }
                 // convert from decimal minutes to decimal degrees!
                 coordTranslator.setLatShift(latitudeShift / 60d);
@@ -1161,7 +1162,7 @@ public class KAPParser {
                     Point temp = coordTranslator.getAbsolutePointFromPosition(displayLimits.get(i));
                     corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
                 }
-                
+
                 // trim off the borders
                 Rectangle2D chartBounds = getBounds(corners);
                 Graphics2D g = image.createGraphics();
@@ -1176,7 +1177,7 @@ public class KAPParser {
                     saveAsPNG(tempImage, new File(fileName + "Clipped.png"));
                     logger.debug("Saving "+fileName + ".png ");
                 }
-                
+
 
                 logger.info("skew = " + getSkew());
                 if (getSkew() == 0.) {
@@ -1236,11 +1237,11 @@ public class KAPParser {
                         logger.debug("Saving "+fileName + "_Rot.png ");
                     }
 
-                    // rebuild the CoordsPolynomTranslator with the rotation-translation transform
+                    // rebuild the CoordsPolynomTrans with the rotation-translation transform
                     if (polynomLoaded) {
-                        coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
+                        coordTranslator = new CoordsPolynomTrans(correctiveLongitudePhase, wpx, wpy, pwx, pwy, tx);
                     } else {
-                        coordTranslator = new CoordsPolynomTranslator(correctiveLongitudePhase, references, tx);
+                        coordTranslator = new CoordsPolynomTrans(correctiveLongitudePhase, references, tx);
                     }
                 }
 
@@ -1348,8 +1349,8 @@ public class KAPParser {
         Point p = coordTranslator.getAbsolutePointFromPosition(minLon, maxLat);
         logger.debug(String.format("(maxLat, minLon) = (%12.7f, %12.7f): --> (%7d, %7d)", maxLat, minLon, p.x, p.y));
 
-        // upper left in transformed oordinates
-        Point pp = new Point(0, 0);
+        // upper left in transformed oordinates - this is wrong I think
+        Point pp = p;
         Position topLeft = coordTranslator.getAbsolutePositionFromPoint(pp);
         logger.debug(String.format("topLeft: (%12.7f, %12.7f): --> (%7d, %7d)", topLeft.getLatitude(), topLeft.getLongitude(), pp.x, pp.y));
 
@@ -1694,7 +1695,7 @@ public class KAPParser {
         this.mapUseableSector = mapUseableSector;
     }
 
-    protected CoordsPolynomTranslator getCoordTranslator() {
+    protected CoordsPolynomTrans getCoordTranslator() {
         return coordTranslator;
     }
 

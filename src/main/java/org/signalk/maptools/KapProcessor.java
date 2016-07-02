@@ -27,7 +27,7 @@ public class KapProcessor {
 	public static final String TILEMAPRESOURCE_XML = "tilemapresource.xml";
 	public static final String OPENLAYERS_HTML = "openlayers.html";
 	private static Logger logger = Logger.getLogger(KapProcessor.class);
-	private CoordsPolynomTranslator coordTranslator;
+	private CoordsPolynomTrans coordTranslator;
 	private KAPParser parser;
 	private int zMin;
 	private int zMax;
@@ -138,9 +138,11 @@ public class KapProcessor {
 			int XTile = Sector.getTileX(se.getLongitude(), zoom);
 			int YTile = Sector.getTileY(se.getLatitude(), zoom);
 			logger.debug("Zoom = "+ zoom+" Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
-
+			Point [] tileBounds;
 			for (int i = xTile; i <= XTile; i++) {
 				for (int y = YTile - 1; y <= yTile; y++) {
+					tileBounds = getTilePixBounds(zoom, i, y);
+					logger.debug(String.format("zoom = %2d i = %6d y = %6d top = %5d bottom %5d", zoom, i, y, tileBounds[0].y, tileBounds[1].y));
 					createTiles(pyramidPath, kapName, zoom, i, y);
 				}
 			}
@@ -155,6 +157,24 @@ public class KapProcessor {
 		FileUtils.writeStringToFile(tileResFile, tileRes.toString());
 		// sort out the openlayers.html
 		writeOpenlayersHtml(pyramidPath, kapName, nw, se, zMin, zMax);
+	}
+
+	public Point[] getTilePixBounds(int zoom, int i, int y){
+		// get lat/lon box
+		double south = Sector.tile2lat(y, zoom);
+		double north = Sector.tile2lat(y + 1, zoom);
+		double west = Sector.tile2lon(i, zoom);
+		double east = Sector.tile2lon(i + 1, zoom);
+		logger.debug("north:" + north + ", south:" + south + ", east:" + east + ", west:" + west);
+
+		// convert to pixels
+		Point nWest = coordTranslator.getAbsolutePointFromPosition(west, north);
+		Point sEast = coordTranslator.getAbsolutePointFromPosition(east, south);
+		int pixelY = nWest.y;
+		int pixely = sEast.y;
+		int pixelx = nWest.x;
+		int pixelX = sEast.x;
+		return new Point[]{nWest, sEast};
 	}
 
 	/**

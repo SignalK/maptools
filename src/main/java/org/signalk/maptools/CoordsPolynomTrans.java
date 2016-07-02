@@ -84,8 +84,8 @@ import java.util.logging.Logger;
  * @author rosaycy
  *
  */
-//public class CoordsPolynomTranslator extends CoordsTranslator {
-public class CoordsPolynomTranslator {
+//public class CoordsPolynomTrans extends CoordsTranslator {
+public class CoordsPolynomTrans {
 
     public Polynom2D wpxPoly = new Polynom2D();
     public Polynom2D wpyPoly = new Polynom2D();
@@ -95,7 +95,7 @@ public class CoordsPolynomTranslator {
     private double latitudeShift = 0.0;
     private double longitudeShift = 0.0;
     private AffineTransform at = null;
-    private static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(CoordsPolynomTranslator.class);
+    private static org.apache.log4j.Logger logger = org.apache.log4j.Logger.getLogger(CoordsPolynomTrans.class);
 
     /**
      * constructor of a polynomial translator given its coefs.
@@ -106,7 +106,7 @@ public class CoordsPolynomTranslator {
      * @param pwx
      * @param pwy
      */
-    public CoordsPolynomTranslator(double correctiveLongitudePhase,
+    public CoordsPolynomTrans(double correctiveLongitudePhase,
             double[] wpx, double[] wpy, double pwx[], double pwy[], AffineTransform trans) {
         super();
         this.cph = correctiveLongitudePhase;
@@ -123,7 +123,7 @@ public class CoordsPolynomTranslator {
      * @param correctiveLongitudePhase
      * @param references
      */
-    public CoordsPolynomTranslator(double correctiveLongitudePhase,
+    public CoordsPolynomTrans(double correctiveLongitudePhase,
             Vector<MapReference> references, AffineTransform trans) {
         super();
         int nbrefs = references.size();
@@ -211,7 +211,7 @@ public class CoordsPolynomTranslator {
                 sb.append("("+p.x+", "+p.y+")");
 //                logger.debug("Not Transformed x,y = " + p.x + ", " + p.y);
             } catch (NoninvertibleTransformException ex) {
-                Logger.getLogger(CoordsPolynomTranslator.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(CoordsPolynomTrans.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         double lon = pwxPoly.getValue(p.x, p.y);

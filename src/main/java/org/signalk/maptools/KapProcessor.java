@@ -42,9 +42,9 @@ public class KapProcessor {
 	 *
 	 * @throws Exception
 	 */
-	public void extractImage(File kapFile) throws Exception {
+	public void extractImage(File kapFile, boolean fixTransparentBlack) throws Exception {
 		String fileName = kapFile.getAbsolutePath();
-		KAPParser parser = new KAPParser(fileName);
+		KAPParser parser = new KAPParser(fileName,fixTransparentBlack);
 		logger.debug(parser.getName());
 		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
 		logger.debug(parser.getDatum());
@@ -83,10 +83,11 @@ public class KapProcessor {
 	 *
 	 * @param kapFile
 	 * @param pyramidPath
+	 * @param fixTransparentBlack 
 	 *
 	 * @throws Exception
 	 */
-	public void createTilePyramid(File kapFile, File pyramidPath) throws Exception {
+	public void createTilePyramid(File kapFile, File pyramidPath, boolean fixTransparentBlack) throws Exception {
 		// 1 minute of lat ~= 1Nm = 1852 M
 		// 1 sec of lat ~= 30M
 
@@ -96,7 +97,7 @@ public class KapProcessor {
 		tileRes.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 		tileRes.append("    <TileMap version=\"1.0.0\" tilemapservice=\"http://tms.osgeo.org/1.0.0\">\n");
 
-		parser = new KAPParser(kapFile.getAbsolutePath());
+		parser = new KAPParser(kapFile.getAbsolutePath(),fixTransparentBlack);
 
 		logger.debug(parser.getName());
 		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
@@ -201,11 +202,12 @@ public class KapProcessor {
 		// convert to pixels
 		Point nWest = coordTranslator.getAbsolutePointFromPosition(west, north);
 		Point sEast = coordTranslator.getAbsolutePointFromPosition(east, south);
-		int pixelY = nWest.y;
-		int pixely = sEast.y;
-		int pixelx = nWest.x;
-		int pixelX = sEast.x;
-		logger.debug(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
+		int pixelY = StrictMath.min(nWest.y,sEast.y);
+		int pixely = StrictMath.max(nWest.y,sEast.y);
+		int pixelx = StrictMath.min(nWest.x,sEast.x);
+		int pixelX = StrictMath.max(nWest.x,sEast.x);
+		logger.debug(" nWestY:" + nWest.y + ", sEasty:" + sEast.y + ", sEastX:" + sEast.x + ", nWestx:" + nWest.x);
+		logger.debug(" pixelY:" + pixelY + ", pixely:" + pixely + ", pixelX:" + pixelX + ", pixelx:" + pixelx);
 
 		// skip if out of frame
 		if (pixelY < 0 && pixely < 0) {

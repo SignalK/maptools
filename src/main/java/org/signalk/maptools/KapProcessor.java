@@ -270,7 +270,7 @@ public class KapProcessor {
 	private void createImage(BufferedImage mapImage, File png, int zoom, int maxWidth, int maxHeight, int pixelY, int pixelx) throws IOException {
 
 		// if image still greater than 512, keep going another level
-		if (zoom + 1 == zMax && zMax < 20 && (mapImage.getHeight() > 640 || mapImage.getWidth() > 640)) {
+		if (zoom + 1 == zMax && zMax < 20 && (mapImage.getHeight() > 256 || mapImage.getWidth() > 256)) {
 			zMax++;
 		}
 		double widthRatio = maxWidth / (double) mapImage.getWidth();

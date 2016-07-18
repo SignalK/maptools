@@ -106,6 +106,8 @@ public class KapProcessor {
 		// take the & out of the title or get SAXE Parse Errors
                 tileRes.append("      <Title>" + parser.getMapName().replace("&", "and") + "</Title>\n");
 		tileRes.append("      <Abstract></Abstract>\n");
+		//scale is an integer, larger is a larger area
+		tileRes.append("      <Metadata scale=\""+parser.getMapFileScale()+"\" mime-type=\"text/xml\" />\n");
 		tileRes.append("      <SRS>EPSG:900913</SRS>\n");
 
 		Position center = parser.getMapUseableSector().getCenter();

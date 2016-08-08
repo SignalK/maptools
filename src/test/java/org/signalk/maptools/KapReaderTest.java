@@ -58,7 +58,7 @@ public class KapReaderTest {
 		assertTrue(target.exists());
 		assertTrue(new File(target,KapProcessor.TILEMAPRESOURCE_XML).exists());
 		assertTrue(new File(target,KapProcessor.OPENLAYERS_HTML).exists());
-		assertEquals(8, target.listFiles().length);
+		assertEquals(9, target.listFiles().length);
 		
 	}
 

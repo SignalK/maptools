@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -157,7 +159,7 @@ public class KapProcessor {
 
 		// write out
 		File tileResFile = new File(pyramidPath, kapName + "/" + TILEMAPRESOURCE_XML);
-		FileUtils.writeStringToFile(tileResFile, tileRes.toString());
+		FileUtils.writeStringToFile(tileResFile, tileRes.toString(), StandardCharsets.UTF_8);
 		// sort out the openlayers.html
 		writeOpenlayersHtml(pyramidPath, kapName, nw, se, zMin, zMax);
 	}
@@ -331,7 +333,7 @@ public class KapProcessor {
 		openlayers = openlayers.replace("var mapMinZoom = 0;", "var mapMinZoom = " + zMin + ";");
 		// var mapMaxZoom = 20;
 		openlayers = openlayers.replace("var mapMaxZoom = 20;", "var mapMaxZoom = " + (zMax - 1) + ";");
-		FileUtils.writeStringToFile(new File(pyramidPath, kapName + "/" + OPENLAYERS_HTML), openlayers);
+		FileUtils.writeStringToFile(new File(pyramidPath, kapName + "/" + OPENLAYERS_HTML), openlayers, StandardCharsets.UTF_8);
 		return openlayers;
 	}
 

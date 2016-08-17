@@ -1152,10 +1152,10 @@ public class KAPParser {
                 mapReady = true;
 
                 BufferedImage tempImage = getImage();
-                if (logger.isDebugEnabled()){
+//                if (logger.isDebugEnabled()){
                     saveAsPNG(tempImage, new File(fileName + ".png"));
                     logger.debug("Saving "+fileName + ".png ");
-                }
+//                }
                 Point2D.Double [] corners = new Point2D.Double[displayLimits.size()];
                 logger.debug("displayLimits - the edges of the map, not including border");
                 for (int i = 0; i < displayLimits.size(); i++) {

@@ -31,7 +31,7 @@ public class KapReaderTest {
 		
 		File png = new File(mapPath, kapName+".png");
 		if(png.exists())png.delete();
-		processor.extractImage(kapFile);
+		processor.extractImage(kapFile, false);
 		assertTrue(png.exists());
 		assertTrue(png.length()>1400000);
 	}
@@ -53,12 +53,12 @@ public class KapReaderTest {
 		File kapFile = new File(mapPath, kapName+".KAP");
 		File target = new File(mapPath, kapName);
 		FileUtils.deleteDirectory(target);
-		processor.createTilePyramid(kapFile, mapPath);
+		processor.createTilePyramid(kapFile, mapPath, false);
 		//should be there now
 		assertTrue(target.exists());
 		assertTrue(new File(target,KapProcessor.TILEMAPRESOURCE_XML).exists());
 		assertTrue(new File(target,KapProcessor.OPENLAYERS_HTML).exists());
-		assertEquals(8, target.listFiles().length);
+		assertEquals(9, target.listFiles().length);
 		
 	}
 

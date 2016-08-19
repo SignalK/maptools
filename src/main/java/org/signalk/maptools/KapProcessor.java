@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -42,9 +44,9 @@ public class KapProcessor {
 	 *
 	 * @throws Exception
 	 */
-	public void extractImage(File kapFile) throws Exception {
+	public void extractImage(File kapFile, boolean fixTransparentBlack) throws Exception {
 		String fileName = kapFile.getAbsolutePath();
-		KAPParser parser = new KAPParser(fileName);
+		KAPParser parser = new KAPParser(fileName,fixTransparentBlack);
 		logger.debug(parser.getName());
 		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y);
 		logger.debug(parser.getDatum());
@@ -83,10 +85,11 @@ public class KapProcessor {
 	 *
 	 * @param kapFile
 	 * @param pyramidPath
+	 * @param fixTransparentBlack 
 	 *
 	 * @throws Exception
 	 */
-	public void createTilePyramid(File kapFile, File pyramidPath) throws Exception {
+	public void createTilePyramid(File kapFile, File pyramidPath, boolean fixTransparentBlack) throws Exception {
 		// 1 minute of lat ~= 1Nm = 1852 M
 		// 1 sec of lat ~= 30M
 
@@ -96,7 +99,7 @@ public class KapProcessor {
 		tileRes.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 		tileRes.append("    <TileMap version=\"1.0.0\" tilemapservice=\"http://tms.osgeo.org/1.0.0\">\n");
 
-		parser = new KAPParser(kapFile.getAbsolutePath());
+		parser = new KAPParser(kapFile.getAbsolutePath(),fixTransparentBlack);
 
 		logger.debug(parser.getName());
 		logger.debug("x=" + parser.getBounds().x + ", y=" + parser.getBounds().y + ", height=" + parser.getBounds().height + ", width="
@@ -105,6 +108,8 @@ public class KapProcessor {
 		// take the & out of the title or get SAXE Parse Errors
                 tileRes.append("      <Title>" + parser.getMapName().replace("&", "and") + "</Title>\n");
 		tileRes.append("      <Abstract></Abstract>\n");
+		//scale is an integer, larger is a larger area
+		tileRes.append("      <Metadata scale=\""+parser.getMapFileScale()+"\" mime-type=\"text/xml\" />\n");
 		tileRes.append("      <SRS>EPSG:900913</SRS>\n");
 
 		Position center = parser.getMapUseableSector().getCenter();
@@ -154,7 +159,7 @@ public class KapProcessor {
 
 		// write out
 		File tileResFile = new File(pyramidPath, kapName + "/" + TILEMAPRESOURCE_XML);
-		FileUtils.writeStringToFile(tileResFile, tileRes.toString());
+		FileUtils.writeStringToFile(tileResFile, tileRes.toString(), StandardCharsets.UTF_8);
 		// sort out the openlayers.html
 		writeOpenlayersHtml(pyramidPath, kapName, nw, se, zMin, zMax);
 	}
@@ -201,11 +206,12 @@ public class KapProcessor {
 		// convert to pixels
 		Point nWest = coordTranslator.getAbsolutePointFromPosition(west, north);
 		Point sEast = coordTranslator.getAbsolutePointFromPosition(east, south);
-		int pixelY = nWest.y;
-		int pixely = sEast.y;
-		int pixelx = nWest.x;
-		int pixelX = sEast.x;
-		logger.debug(" pixelY:" + nWest.y + ", pixely:" + sEast.y + ", pixelX:" + sEast.x + ", pixelx:" + nWest.x);
+		int pixelY = StrictMath.min(nWest.y,sEast.y);
+		int pixely = StrictMath.max(nWest.y,sEast.y);
+		int pixelx = StrictMath.min(nWest.x,sEast.x);
+		int pixelX = StrictMath.max(nWest.x,sEast.x);
+		logger.debug(" nWestY:" + nWest.y + ", sEasty:" + sEast.y + ", sEastX:" + sEast.x + ", nWestx:" + nWest.x);
+		logger.debug(" pixelY:" + pixelY + ", pixely:" + pixely + ", pixelX:" + pixelX + ", pixelx:" + pixelx);
 
 		// skip if out of frame
 		if (pixelY < 0 && pixely < 0) {
@@ -268,7 +274,7 @@ public class KapProcessor {
 	private void createImage(BufferedImage mapImage, File png, int zoom, int maxWidth, int maxHeight, int pixelY, int pixelx) throws IOException {
 
 		// if image still greater than 512, keep going another level
-		if (zoom + 1 == zMax && zMax < 20 && (mapImage.getHeight() > 640 || mapImage.getWidth() > 640)) {
+		if (zoom + 1 == zMax && zMax < 20 && (mapImage.getHeight() > 256 || mapImage.getWidth() > 256)) {
 			zMax++;
 		}
 		double widthRatio = maxWidth / (double) mapImage.getWidth();
@@ -327,7 +333,7 @@ public class KapProcessor {
 		openlayers = openlayers.replace("var mapMinZoom = 0;", "var mapMinZoom = " + zMin + ";");
 		// var mapMaxZoom = 20;
 		openlayers = openlayers.replace("var mapMaxZoom = 20;", "var mapMaxZoom = " + (zMax - 1) + ";");
-		FileUtils.writeStringToFile(new File(pyramidPath, kapName + "/" + OPENLAYERS_HTML), openlayers);
+		FileUtils.writeStringToFile(new File(pyramidPath, kapName + "/" + OPENLAYERS_HTML), openlayers, StandardCharsets.UTF_8);
 		return openlayers;
 	}
 

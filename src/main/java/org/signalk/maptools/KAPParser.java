@@ -173,8 +173,10 @@ package org.signalk.maptools;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
 import java.awt.Transparency;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
@@ -182,6 +184,9 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
+import java.awt.image.FilteredImageSource;
+import java.awt.image.ImageFilter;
+import java.awt.image.ImageProducer;
 import java.awt.image.IndexColorModel;
 import java.awt.image.WritableRaster;
 import java.io.BufferedReader;
@@ -198,10 +203,10 @@ import java.util.Scanner;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
-import static javax.swing.Spring.height;
-import static javax.swing.Spring.width;
 
 import org.apache.log4j.Logger;
+
+
 
 /**
  * Class used to decode KAP files. typical use: <code>
@@ -223,7 +228,7 @@ public class KAPParser {
         public byte[] greens;
         public byte[] blues;
         public int nbColors = 0;
-
+        
         /**
          * define the sizes of all components but DO NOT define nbColors.
          * nbColors is to be defined later, when reading the kap rgb section.
@@ -365,6 +370,9 @@ public class KAPParser {
     private String BD = ""; //$NON-NLS-1$
     private CoordsPolynomTrans coordTranslator;
 
+    private ImageFilter transparentFilter = new TransparentImageFilter();
+    private ImageFilter opaqueFilter = new OpaqueImageFilter();
+	private boolean fixTransparentBlack=false;
     /**
      * @return true is the map is ready for display.
      */
@@ -414,9 +422,10 @@ public class KAPParser {
      *
      * @throws Exception
      */
-    public KAPParser(String fileName) throws Exception {
+    public KAPParser(String fileName, boolean fixTransparentBlack) throws Exception {
         this();
         this.fileName = fileName;
+        this.fixTransparentBlack=fixTransparentBlack;
         loadHeader();
     }
 
@@ -513,6 +522,10 @@ public class KAPParser {
             int top = aTop < 0 ? 0 : aTop;
             int width = (int) (left + aWidth > mapWidthPixels ? mapWidthPixels - left : aWidth);
             int height = (int) (top + aHeight > mapHeightPixels ? mapHeightPixels - top : aHeight);
+            //(y + height) is outside of Raster
+            //width = (width)<0?0:width;
+            //height = (height)<0?0:height;
+            logger.debug("Image bounds:  width:" + mapWidthPixels + ", height:" + mapHeightPixels);
             logger.debug("Image adjusted: aTop:" + top + ", aLeft:" + left + ", width:" + width + ", height:" + height);
 
             //Get the image from the from the copy of the image held in the KAPParser instance.
@@ -650,6 +663,7 @@ public class KAPParser {
             // create a raster to set directly the index of colors in
             try {
                 WritableRaster raster = colorModel.createCompatibleWritableRaster(width, height);
+                
                 // create the associate image
                 image = new BufferedImage(colorModel, raster, false, null);
                 if (buffer != null) {
@@ -1137,7 +1151,7 @@ public class KAPParser {
             }
             // validate the map only when the header has been completely read
             if (endOfSection) {
-                //
+            	
                 // build the coordinate translator
                 polynomLoaded = wpxDone && wpyDone && pwxDone && pwyDone;
                 tx = null;
@@ -1152,6 +1166,11 @@ public class KAPParser {
                 mapReady = true;
 
                 BufferedImage tempImage = getImage();
+                if(fixTransparentBlack){
+	              //reverse colors - make transparent black, make white transparent
+	                Image tImage = makeTransparentBlack(tempImage, null);
+	                tempImage = imageToBufferedImage(makeColorTransparent(tImage, Color.white));
+                }
 //                if (logger.isDebugEnabled()){
                     saveAsPNG(tempImage, new File(fileName + ".png"));
                     logger.debug("Saving "+fileName + ".png ");
@@ -1163,7 +1182,7 @@ public class KAPParser {
                     corners[i] = new Point2D.Double((double) temp.x, (double) temp.y);
                 }
 
-                // trim off the borders
+                // trim off the borders and remove white
                 Rectangle2D chartBounds = getBounds(corners);
                 Graphics2D g = image.createGraphics();
                 g.setComposite(AlphaComposite.Src);
@@ -1180,8 +1199,9 @@ public class KAPParser {
 
 
                 logger.info("skew = " + getSkew());
-                if (getSkew() == 0.) {
+                if (getSkew() == 0.0) {
                     tx = null;
+                    image=tempImage;
                 } else {
                     tx = new AffineTransform();
 
@@ -1611,7 +1631,29 @@ public class KAPParser {
         this.fileName = fileName;
 
     }
+    
 
+	public Image makeColorTransparent(Image im, final Color color) {
+		ImageProducer ip = new FilteredImageSource(im.getSource(), transparentFilter);
+		return Toolkit.getDefaultToolkit().createImage(ip);
+    }
+	
+
+	public Image makeTransparentBlack(Image im, final Color color) {
+		ImageProducer ip = new FilteredImageSource(im.getSource(),opaqueFilter );
+		return Toolkit.getDefaultToolkit().createImage(ip);
+    }
+
+	private  BufferedImage imageToBufferedImage(Image image) {
+
+    	BufferedImage bufferedImage = new BufferedImage(image.getWidth(null), image.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+    	Graphics2D g2 = bufferedImage.createGraphics();
+    	g2.drawImage(image, 0, 0, null);
+    	g2.dispose();
+
+    	return bufferedImage;
+
+    }
     // @Override
     public void setImage(BufferedImage image) throws Exception {
         ColorModel cm = image.getColorModel();

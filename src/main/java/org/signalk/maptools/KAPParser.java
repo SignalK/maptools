@@ -1036,7 +1036,13 @@ public class KAPParser {
                                 while (sc.hasNext()) {
                                     String field = sc.next();
                                     if (field.contains("SC=")) { //$NON-NLS-1$
-                                        mapFileScale = Integer.parseInt(field.replace("SC=", "")); //$NON-NLS-1$ //$NON-NLS-2$
+                                    	String scale = field.replace("SC=", "");
+                                    	try{
+                                    		mapFileScale = Integer.parseInt(scale); //$NON-NLS-1$ //$NON-NLS-2$
+                                    	}catch(Exception e){
+                                    		//openSeaMap has floats here
+                                    		mapFileScale = (int) Float.parseFloat(scale);
+                                    	}
                                     } else if (field.contains("GD=")) { //$NON-NLS-1$
                                         datum = field.replace("GD=", ""); //$NON-NLS-1$ //$NON-NLS-2$
                                     } else if (field.contains("PR=")) { //$NON-NLS-1$
@@ -1361,7 +1367,7 @@ public class KAPParser {
 
         // Here we get the pixel positions from the lat/lon display limits
         // Then we use the pixel positions to recalculate the lat/Lon of the limiting corners
-        // and calculatge the map height and width in pixels
+        // and calculate the map height and width in pixels
         logger.debug(" marginTop:" + marginTop + ", marginBottom:" + marginBottom + ", marginLeft:" + marginLeft + ", marginRight:" + marginRight);
         logger.debug(" maxLat:" + maxLat + " minLon:" + minLon);
         // get point corresponding to maxLat, minLon
@@ -1388,6 +1394,7 @@ public class KAPParser {
         if (isCrossingDayNightLine(topLeft, bottomRight)) {
             topLeft = new Position(maxLat, maxLon);
             bottomRight = new Position(minLat, negRight.getLongitude());
+            logger.debug("Resetting bottomleft to negRight");
         }
         return new Sector(topLeft, bottomRight);
     }

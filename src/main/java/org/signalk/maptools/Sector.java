@@ -53,11 +53,11 @@ public class Sector {
 
 
 	public static int getTileX(final double lon, final int zoom) {
-		int xtile = (int) StrictMath.floor((lon + 180) / 360 * (1 << zoom));
+		int xtile = (int) StrictMath.floor((lon + 180) / 360 * StrictMath.pow(2.0, zoom));
 		if (xtile < 0)
 			xtile = 0;
-		if (xtile >= (1 << zoom))
-			xtile = ((1 << zoom) - 1);
+		if (xtile >= StrictMath.pow(2.0, zoom))
+			xtile =  (int) StrictMath.floor((StrictMath.pow(2.0, zoom) - 1));
 		return xtile;
 		// return metersToTileX( lon2x(lon), zoom);
 	}

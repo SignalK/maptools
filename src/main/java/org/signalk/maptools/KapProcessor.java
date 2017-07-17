@@ -142,13 +142,37 @@ public class KapProcessor {
 			int yTile = Sector.getTileY(nw.getLatitude(), zoom);
 			int XTile = Sector.getTileX(se.getLongitude(), zoom);
 			int YTile = Sector.getTileY(se.getLatitude(), zoom);
-			logger.debug("Zoom = "+ zoom+" Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
+			logger.info("Zoom = "+ zoom+" Tiles:x=" + xTile + "=>" + XTile + ", y=" + YTile + "=>" + yTile);
 			Point [] tileBounds;
-			for (int i = xTile; i <= XTile; i++) {
-				for (int y = YTile - 1; y <= yTile; y++) {
-					tileBounds = getTilePixBounds(zoom, i, y);
-					logger.debug(String.format("zoom = %2d i = %6d y = %6d top = %5d bottom %5d", zoom, i, y, tileBounds[0].y, tileBounds[1].y));
-					createTiles(pyramidPath, kapName, zoom, i, y);
+			//crossing 180 deg
+			if(parser.isDateLine()){
+				logger.info("Across dateline");
+				//XTile to max
+				int dz = ((1<<zoom)-1);
+				logger.info("Tile "+XTile+" to "+dz);
+				for (int i = XTile; i <= dz; i++) {
+					for (int y = YTile - 1; y <= yTile; y++) {
+						tileBounds = getTilePixBounds(zoom, i, y);
+						logger.debug(String.format("zoom = %2d i = %6d y = %6d top = %5d bottom %5d", zoom, i, y, tileBounds[0].y, tileBounds[1].y));
+						createTiles(pyramidPath, kapName, zoom, i, y);
+					}
+				}
+				//and xtile to 0
+				logger.info("Tile "+xTile+" to 0");
+				for (int i = 0; i <= xTile; i++) {
+					for (int y = YTile - 1; y <= yTile; y++) {
+						tileBounds = getTilePixBounds(zoom, i, y);
+						logger.debug(String.format("zoom = %2d i = %6d y = %6d top = %5d bottom %5d", zoom, i, y, tileBounds[0].y, tileBounds[1].y));
+						createTiles(pyramidPath, kapName, zoom, i, y);
+					}
+				}
+			}else{
+				for (int i = xTile; i <= XTile; i++) {
+					for (int y = YTile - 1; y <= yTile; y++) {
+						tileBounds = getTilePixBounds(zoom, i, y);
+						logger.debug(String.format("zoom = %2d i = %6d y = %6d top = %5d bottom %5d", zoom, i, y, tileBounds[0].y, tileBounds[1].y));
+						createTiles(pyramidPath, kapName, zoom, i, y);
+					}
 				}
 			}
 		}
@@ -163,6 +187,8 @@ public class KapProcessor {
 		// sort out the openlayers.html
 		writeOpenlayersHtml(pyramidPath, kapName, nw, se, zMin, zMax);
 	}
+
+	
 
 	public Point[] getTilePixBounds(int zoom, int i, int y){
 		// get lat/lon box
@@ -227,7 +253,7 @@ public class KapProcessor {
 		if (pixelX > parser.getMapWidthPixels() && pixelx > parser.getMapWidthPixels()) {
 			return;
 		}
-
+		
 		int maxHeight = StrictMath.abs(pixely - pixelY);
 		int maxWidth = StrictMath.abs(pixelX - pixelx);
 
@@ -250,7 +276,22 @@ public class KapProcessor {
 		png.getParentFile().mkdirs();
 		try {
 			BufferedImage mapImage = parser.getImage((int) pixelx, (int) pixelY, width, height);
+			if(mapImage==null)return;
+			//if(mapImage.getWidth()<=0 || mapImage.getHeight()<=0)return;
 			logger.debug("Clipped Image: x:" + mapImage.getWidth() + ", y:" + mapImage.getHeight());
+			
+			// if image still greater than 512, keep going another level
+			if (zoom + 1 == zMax 
+					&& mapImage.getWidth()< parser.getMapWidthPixels()/2
+					&& zMax < 20 
+					&& (mapImage.getHeight() > 256 || mapImage.getWidth() > 256)) {
+				logger.info("zMax Image: aTop:" + pixelY + ", aLeft:" + pixelx + ", width:" + width + ", height:" + height);
+				logger.info(" zMax="+zMax+", maxWidth="+maxWidth);
+				zMax=zoom + 2;
+				logger.info(" Check zMax height="+mapImage.getHeight()+", width="+mapImage.getWidth());
+				logger.info(" Incremented zMax to "+zMax);
+			}
+			
 			createImage(mapImage, png, zoom, maxWidth, maxHeight, pixelY, pixelx);
 		} catch (Exception e) {
 			logger.error("\tError", e);
@@ -273,10 +314,7 @@ public class KapProcessor {
 	 */
 	private void createImage(BufferedImage mapImage, File png, int zoom, int maxWidth, int maxHeight, int pixelY, int pixelx) throws IOException {
 
-		// if image still greater than 512, keep going another level
-		if (zoom + 1 == zMax && zMax < 20 && (mapImage.getHeight() > 256 || mapImage.getWidth() > 256)) {
-			zMax++;
-		}
+		
 		double widthRatio = maxWidth / (double) mapImage.getWidth();
 		double heightRatio = maxHeight / (double) mapImage.getHeight();
 		// double widthScale = maxWidth/(double)width;

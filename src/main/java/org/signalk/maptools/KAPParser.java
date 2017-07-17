@@ -373,6 +373,7 @@ public class KAPParser {
     private ImageFilter transparentFilter = new TransparentImageFilter();
     private ImageFilter opaqueFilter = new OpaqueImageFilter();
 	private boolean fixTransparentBlack=false;
+	private boolean dateLine = false;
     /**
      * @return true is the map is ready for display.
      */
@@ -1391,15 +1392,16 @@ public class KAPParser {
         Position negRight = coordTranslator.getAbsolutePositionFromPoint(pix);
         logger.debug(String.format("negRight: (%12.7f, %12.7f): --> (%7d, %7d)", negRight.getLatitude(), negRight.getLongitude(), pix.x, pix.y));
 
-        if (isCrossingDayNightLine(topLeft, bottomRight)) {
+        if (isCrossingDateLine(topLeft, bottomRight)) {
             topLeft = new Position(maxLat, maxLon);
             bottomRight = new Position(minLat, negRight.getLongitude());
+            setDateLine(true);
             logger.debug("Resetting bottomleft to negRight");
         }
         return new Sector(topLeft, bottomRight);
     }
 
-    private static boolean isCrossingDayNightLine(Position topLeft, Position bottomRight) {
+    private static boolean isCrossingDateLine(Position topLeft, Position bottomRight) {
         if (topLeft.getLongitude() > bottomRight.getLongitude()) {
             return true;
         }
@@ -1771,5 +1773,13 @@ public class KAPParser {
     protected void setMapFileScale(int mapFileScale) {
         this.mapFileScale = mapFileScale;
     }
+
+	public boolean isDateLine() {
+		return dateLine;
+	}
+
+	public void setDateLine(boolean dateLine) {
+		this.dateLine = dateLine;
+	}
 
 }

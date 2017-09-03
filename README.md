@@ -1,4 +1,4 @@
-##Map Tools
+## Map Tools
 
  __Sample:__ http://htmlpreview.github.io/?https://github.com/SignalK/maptools/blob/master/src/test/resources/NZ61401/openlayers.html
 
@@ -16,6 +16,6 @@
  * http://www.linz.govt.nz/sea/charts
  * https://sites.google.com/site/nauticalfree/
  
-##Credits
+## Credits
 
  The KAP functionality is based on the KAP parser from the Capcode project ( http://capcode.sourceforge.net ).
